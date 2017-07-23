@@ -1,0 +1,35 @@
+#gamedebugger {
+    position: fixed;
+    bottom: 0;
+    left:0;
+    right:0;
+
+    height: 200px;
+    border-top: 3px dashed #DDD;
+    background-color: rgba(0,0,0, 0.8);
+
+    color: #FFF;
+    font-family : monospace;
+    overflow-y : auto;
+}
+
+#debugframecount {
+    position: fixed;
+    bottom: 10px;
+    right: 10px;
+
+    font-size: 12px;
+    color: #AAA;
+}
+
+#debugfps {
+    position :fixed;
+    bottom: 28px;
+    right: 10px;
+    font-size: 12px;
+    color: #AAA;
+}
+
+#debugoutput {
+    padding: 10px;
+}

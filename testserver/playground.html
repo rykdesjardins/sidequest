@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html>
+    <head>
+
+    </head>
+    <body>
+        <canvas id="gamecontainer"></canvas>
+
+        <script src="//localhost:8088/build/compiled.js"></script>
+        <script>
+            window.game = new Game("gamecontainer", {env : "dev"}).start();
+        </script>
+    </body>
+</html>
