@@ -327,17 +327,27 @@ var d = require('./dom');
 var Physics = require('./physics');
 var Keyboard = require('./keyboard');
 
+var defaultoptions = {
+    x: 0, y: 0, w: 0, h: 0,
+    initspeed: 1,
+    maxspeed: 3,
+    controlled: false,
+    friction: 0.2
+};
+
 var GraphicElement = function () {
     function GraphicElement(type, extra) {
         _classCallCheck(this, GraphicElement);
 
         this.ready = false;
         this.type = type;
-        this.options = extra || {};
-        this.vector = new Physics.Vector2D(this.options.x || 0, this.options.y || 0);
-        this.rect = new Physics.Vector2D(this.options.w || 0, this.options.h || 0);
+        this.options = Object.assign(defaultoptions, extra || {});
+        this.vector = new Physics.Vector2D(this.options.x, this.options.y);
+        this.rect = new Physics.Vector2D(this.options.w, this.options.h);
 
-        this.controlled = false;
+        this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxspeed);
+
+        this.controlled = this.options.controlled;
         this.key;
 
         switch (this.type) {
@@ -428,30 +438,36 @@ var GraphicElement = function () {
         }
     }, {
         key: 'keyCommand',
-        value: function keyCommand(which) {
-            switch (which) {
-                case "right":
-                    this.vector.setVelocity(3, this.vector.vely);
-                    if (this.sprite) {
-                        this.sprite.changeState(this.movingstate, "right");
-                    }
-                    break;
+        value: function keyCommand(which, pressed) {
+            if (pressed) {
+                switch (which) {
+                    case Keyboard.KEY_RIGHT:
+                        this.vector.setVelocity(this.options.initspeed, this.vector.vely);
+                        this.direction = "right";
+                        this.vector.setAcceleration(this.options.friction, this.vector.accely);
+                        if (this.sprite) {
+                            this.sprite.changeState(this.movingstate, "right");
+                        }
+                        break;
 
-                case "left":
-                    this.vector.setVelocity(-3, this.vector.vely);
-                    if (this.sprite) {
-                        this.sprite.changeState(this.movingstate, "left");
-                    }
-                    break;
+                    case Keyboard.KEY_LEFT:
+                        this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
+                        this.direction = "left";
+                        this.vector.setAcceleration(-this.options.friction, this.vector.accely);
+                        if (this.sprite) {
+                            this.sprite.changeState(this.movingstate, "left");
+                        }
+                        break;
 
-                case "release":
-                    this.vector.setVelocity(0, this.vector.vely);
-                    if (this.sprite) {
-                        this.sprite.changeState();
-                    }
-                    break;
+                    default:
+                }
+            } else if (which == Keyboard.KEY_LEFT || which == Keyboard.KEY_RIGHT) {
+                var mod = this.direction == "left" ? 1 : -1;
+                this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
 
-                default:
+                if (this.sprite) {
+                    this.sprite.changeState();
+                }
             }
         }
     }, {
@@ -467,21 +483,16 @@ var GraphicElement = function () {
 
             log('GElement', "Binding Graphic Element with keyboard controls");
             if (options.arrows) {
-                this.keventleft = function () {
-                    _this2.keyCommand('left');
+                this.keventleft = function (which, pressed) {
+                    return _this2.keyCommand(which, pressed);
                 };
-                this.keventright = function () {
-                    _this2.keyCommand('right');
+                this.keventright = function (which, pressed) {
+                    return _this2.keyCommand(which, pressed);
                 };
 
                 keyboard.bindKey('left', this.keventleft);
                 keyboard.bindKey('right', this.keventright);
             }
-
-            this.keventreleased = function () {
-                _this2.keyCommand('release');
-            };
-            keyboard.bindKeyUp(this.keventreleased);
         }
     }, {
         key: 'giveupControll',
@@ -640,7 +651,49 @@ var keymap = {
     enter: 13
 };
 
+var keystate = {};
+for (var key in keymap) {
+    keystate[key] = false;
+}
+
 var Keyboard = function () {
+    _createClass(Keyboard, null, [{
+        key: 'KEY_UP',
+        get: function get() {
+            return keymap.up;
+        }
+    }, {
+        key: 'KEY_DOWN',
+        get: function get() {
+            return keymap.down;
+        }
+    }, {
+        key: 'KEY_LEFT',
+        get: function get() {
+            return keymap.left;
+        }
+    }, {
+        key: 'KEY_RIGHT',
+        get: function get() {
+            return keymap.right;
+        }
+    }, {
+        key: 'KEY_SPACE',
+        get: function get() {
+            return keymap.space;
+        }
+    }, {
+        key: 'KEY_SHIFT',
+        get: function get() {
+            return keymap.shift;
+        }
+    }, {
+        key: 'KEY_ENTER',
+        get: function get() {
+            return keymap.enter;
+        }
+    }]);
+
     function Keyboard(canvas) {
         var _this = this;
 
@@ -650,13 +703,13 @@ var Keyboard = function () {
 
         log('Keyboard', "Binding global key events");
         this.keyEvents = {
-            /* up    */38: [],
-            /* down  */40: [],
-            /* left  */37: [],
-            /* right */39: [],
-            /* space */32: [],
-            /* shift */16: [],
-            /* enter */13: []
+            13: [],
+            16: [],
+            32: [],
+            37: [],
+            38: [],
+            39: [],
+            40: []
         };
 
         this.upEvents = [];
@@ -670,19 +723,33 @@ var Keyboard = function () {
     }
 
     _createClass(Keyboard, [{
+        key: 'addKey',
+        value: function addKey(byte, name) {
+            this.keyEvents[byte] = name;
+            keymap[name] = byte;
+            keystate[byte] = false;
+        }
+    }, {
         key: 'down',
         value: function down(ev) {
-            if (this.keyEvents[ev.which]) {
-                this.keyEvents[ev.which].forEach(function (ev) {
-                    return ev();
+            if (this.keyEvents[ev.which] && !keystate[ev.which]) {
+                keystate[ev.which] = true;
+                this.keyEvents[ev.which].forEach(function (cb) {
+                    return cb(ev.which, true);
                 });
             }
         }
     }, {
+        key: 'keyToCode',
+        value: function keyToCode(key) {
+            return keymap[key];
+        }
+    }, {
         key: 'up',
         value: function up(ev) {
-            this.upEvents.forEach(function (ev) {
-                return ev();
+            keystate[ev.which] = false;
+            this.keyEvents[ev.which].forEach(function (cb) {
+                return cb(ev.which, false);
             });
         }
     }, {
@@ -692,26 +759,9 @@ var Keyboard = function () {
             this.keyEvents[keymap[key] || key].push(sender ? bind.bind(sender) : bind);
         }
     }, {
-        key: 'bindKeyUp',
-        value: function bindKeyUp(bind, sender) {
-            this.upEvents.push(sender ? bind.bind(sender) : bind);
-        }
-    }, {
         key: 'killKey',
         value: function killKey(key, bound) {
             var events = this.keyEvents[keymap[key] || key];
-            var index = events.indexOf(function (x) {
-                return x == bound;
-            });
-
-            if (index != -1) {
-                events.splice(index, 1);
-            }
-        }
-    }, {
-        key: 'killKeyUp',
-        value: function killKeyUp(bound) {
-            var events = this.upEvents;
             var index = events.indexOf(function (x) {
                 return x == bound;
             });
@@ -832,6 +882,9 @@ var Vector2D = function () {
 
         this.accelx = 0;
         this.accely = 0;
+
+        this.maxvelx;
+        this.maxvely;
     }
 
     _createClass(Vector2D, [{
@@ -847,6 +900,12 @@ var Vector2D = function () {
             this.desty = desty;
         }
     }, {
+        key: "setMaxVelocity",
+        value: function setMaxVelocity(x, y) {
+            this.maxvelx = x;
+            this.maxvely = y;
+        }
+    }, {
         key: "setVelocity",
         value: function setVelocity(x, y) {
             this.velx = x;
@@ -854,15 +913,38 @@ var Vector2D = function () {
         }
     }, {
         key: "setAcceleration",
-        value: function setAcceleration(x, y) {
+        value: function setAcceleration(x, y, breakatzerox, breakatzeroy) {
             this.accelx = x;
             this.accely = y;
+
+            this.breakatzerox = breakatzerox;
+            this.breakatzeroy = breakatzeroy;
         }
     }, {
         key: "update",
         value: function update() {
+            var ogvelx = this.velx;
+            var ogvely = this.vely;
+
             this.velx += this.accelx;
             this.vely += this.accely;
+
+            if (this.maxvelx && Math.abs(this.velx) > this.maxvelx) {
+                this.velx = this.maxvelx * (this.velx < 0 ? -1 : 1);
+            }
+            if (this.maxvely && Math.abs(this.vely) > this.maxvely) {
+                this.vely = this.maxvely * (this.vely < 0 ? -1 : 1);
+            }
+
+            if (this.breakatzerox && (ogvelx > 0 && this.velx < 0 || ogvelx < 0 && this.velx > 0)) {
+                this.accelx = 0;
+                this.velx = 0;
+            }
+
+            if (this.breakatzeroy && (ogvely > 0 && this.vely < 0 || ogvely < 0 && this.vely > 0)) {
+                this.accely = 0;
+                this.vely = 0;
+            }
 
             this.x += this.velx;
             this.y += this.vely;

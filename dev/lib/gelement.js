@@ -3,15 +3,25 @@ const d = require('./dom');
 const Physics = require('./physics');
 const Keyboard = require('./keyboard');
 
+const defaultoptions = {
+    x : 0, y : 0, w : 0, h : 0,
+    initspeed : 1,
+    maxspeed : 3,
+    controlled : false,
+    friction : 0.2
+};
+
 class GraphicElement {
     constructor(type, extra) {
         this.ready = false;
         this.type = type;
-        this.options = extra || {};
-        this.vector = new Physics.Vector2D(this.options.x || 0, this.options.y || 0);
-        this.rect = new Physics.Vector2D(this.options.w || 0, this.options.h || 0);
+        this.options = Object.assign(defaultoptions, extra || {});
+        this.vector = new Physics.Vector2D(this.options.x, this.options.y);
+        this.rect = new Physics.Vector2D(this.options.w, this.options.h);
 
-        this.controlled = false;
+        this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxspeed);
+
+        this.controlled = this.options.controlled;
         this.key;
 
         switch (this.type) {
@@ -93,30 +103,37 @@ class GraphicElement {
         throw new Error("Tried to draw a GElement with an invalid type : " + this.type);
     }
 
-    keyCommand(which) {
-        switch (which) {
-            case "right" : 
-                this.vector.setVelocity(3, this.vector.vely);
-                if (this.sprite) {
-                    this.sprite.changeState(this.movingstate, "right");
-                }
-                break;
+    keyCommand(which, pressed) {
+        if (pressed) {
+            switch (which) {
+                case Keyboard.KEY_RIGHT : 
+                    this.vector.setVelocity(this.options.initspeed, this.vector.vely);
+                    this.direction = "right";
+                    this.vector.setAcceleration(this.options.friction, this.vector.accely);
+                    if (this.sprite) {
+                        this.sprite.changeState(this.movingstate, "right");
+                    }
+                    break;
 
-            case "left" : 
-                this.vector.setVelocity(-3, this.vector.vely);
-                if (this.sprite) {
-                    this.sprite.changeState(this.movingstate, "left");
-                }
-                break;
+                case Keyboard.KEY_LEFT : 
+                    this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
+                    this.direction = "left";
+                    this.vector.setAcceleration(-this.options.friction, this.vector.accely);
+                    if (this.sprite) {
+                        this.sprite.changeState(this.movingstate, "left");
+                    }
+                    break;
+                    
 
-            case "release":
-                this.vector.setVelocity(0, this.vector.vely);
-                if (this.sprite) {
-                    this.sprite.changeState();
-                }
-                break;
+                default:
+            }
+        } else if (which == Keyboard.KEY_LEFT || which == Keyboard.KEY_RIGHT) {
+            let mod = this.direction == "left" ? 1 : -1;
+            this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
 
-            default:
+            if (this.sprite) {
+                this.sprite.changeState();
+            }
         }
     }
 
@@ -127,15 +144,12 @@ class GraphicElement {
         
         log('GElement', "Binding Graphic Element with keyboard controls");
         if (options.arrows) {
-            this.keventleft  = () => { this.keyCommand('left');  };
-            this.keventright = () => { this.keyCommand('right'); };
+            this.keventleft  = (which, pressed) => this.keyCommand(which, pressed); 
+            this.keventright = (which, pressed) => this.keyCommand(which, pressed); 
 
             keyboard.bindKey('left',  this.keventleft);
             keyboard.bindKey('right', this.keventright);
         }
-
-        this.keventreleased = () => { this.keyCommand('release'); };
-        keyboard.bindKeyUp(this.keventreleased);
     }
 
     giveupControll() {
