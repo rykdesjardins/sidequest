@@ -49,6 +49,8 @@ class Keyboard {
         this.keyEvents[byte] = name;
         keymap[name] = byte;
         keystate[byte] = false;
+
+        log('Keyboard', 'Registered new key ' + name + ' with byte ' + byte);
     }
 
     down(ev) {
