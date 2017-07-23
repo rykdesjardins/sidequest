@@ -13,16 +13,20 @@
             cloud.setPosition(40, 20);
             game.graphics.addElement(0, 'cloud', cloud)
 
-            var player = new SideQuest.Sprite({
+            var player = new SideQuest.GraphicElement("sprite", {
                 x : 20, y : 200,
                 w : 120, h : 100,
-                spritesets : {
-                    neutral : new SideQuest.SpriteSet('fileset', '/cat/Idle ($).png', 8, 5),
-                    running : new SideQuest.SpriteSet('fileset', '/cat/Run ($).png', 8, 5)
-                }
+
+                sprite : new SideQuest.Sprite({
+                    spritesets : {
+                        neutral : new SideQuest.SpriteSet('fileset', '/cat/Idle ($).png', 8, 5),
+                        running : new SideQuest.SpriteSet('fileset', '/cat/Run ($).png', 8, 5)
+                    }
+                })
             });
 
             game.graphics.addElement(4, 'player', player);
+            player.control(game.keyboard, {arrows : true, movingstate : "running"});
         </script>
     </body>
 </html>

@@ -7,6 +7,7 @@ const SpriteSet = require('./lib/spriteset');
 const Sprite = require('./lib/sprite');
 const GraphicElement = require('./lib/gelement');
 const Physics = require('./lib/physics');
+const Keyboard = require('./lib/keyboard');
 
 class Game {
     static defaults() {
@@ -27,11 +28,12 @@ class Game {
 
         this.context = this.c = this.canvas.getContext('2d');
         this.options = Object.assign(Game.defaults(), options);
+        this.gamedebugger = new Debugger(this.canvas);
 
         this.graphics = new Graphics(this.context, this.options);
         this.mouse = new Mouse(this.canvas);
+        this.keyboard = new Keyboard(this.canvas);
 
-        this.gamedebugger = new Debugger(this.canvas);
         if (this.options.env == "dev") {
             glob.__SIDESCROLLGAME.env == "dev";
             this.gamedebugger.cast();
@@ -95,4 +97,4 @@ class Game {
     }
 }
 
-glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics }
+glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, log }

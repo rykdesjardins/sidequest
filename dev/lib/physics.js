@@ -5,6 +5,12 @@ class Vector2D {
 
         this.destx = destx;
         this.desty = desty;
+
+        this.velx = 0;
+        this.vely = 0;
+
+        this.accelx = 0;
+        this.accely = 0;
     }
 
     at(x, y) {
@@ -15,6 +21,24 @@ class Vector2D {
     to(destx, desty) {
         this.destx = destx;
         this.desty = desty;
+    }
+
+    setVelocity(x, y) {
+        this.velx = x;
+        this.vely = y;
+    }
+
+    setAcceleration(x, y) {
+        this.accelx = x;
+        this.accely = y;
+    }
+
+    update() {
+        this.velx += this.accelx;
+        this.vely += this.accely;
+
+        this.x += this.velx;
+        this.y += this.vely;
     }
 
     length() {

@@ -81,8 +81,8 @@ class SpriteSet {
         }
     }
 
-    draw(context, position, box) {
-        this.ready && context.drawImage(this.currentFrame, position.x, position.y, box.x, box.y);
+    draw(context, x, y, w, h) {
+        this.ready && context.drawImage(this.currentFrame, x, y, w, h);
         this.drew++;
         if (this.drew == this.framestateupdate) {
             this.drew = 0;

@@ -14,6 +14,7 @@ var SpriteSet = require('./lib/spriteset');
 var Sprite = require('./lib/sprite');
 var GraphicElement = require('./lib/gelement');
 var Physics = require('./lib/physics');
+var Keyboard = require('./lib/keyboard');
 
 var Game = function () {
     _createClass(Game, null, [{
@@ -43,11 +44,12 @@ var Game = function () {
 
         this.context = this.c = this.canvas.getContext('2d');
         this.options = Object.assign(Game.defaults(), options);
+        this.gamedebugger = new Debugger(this.canvas);
 
         this.graphics = new Graphics(this.context, this.options);
         this.mouse = new Mouse(this.canvas);
+        this.keyboard = new Keyboard(this.canvas);
 
-        this.gamedebugger = new Debugger(this.canvas);
         if (this.options.env == "dev") {
             glob.__SIDESCROLLGAME.env == "dev";
             this.gamedebugger.cast();
@@ -133,9 +135,9 @@ var Game = function () {
     return Game;
 }();
 
-glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics };
+glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics, Keyboard: Keyboard, Mouse: Mouse, log: log };
 
-},{"./lib/debugger":2,"./lib/gelement":4,"./lib/glob":5,"./lib/graphics":6,"./lib/log":7,"./lib/mouse":8,"./lib/physics":9,"./lib/sprite":10,"./lib/spriteset":11}],2:[function(require,module,exports){
+},{"./lib/debugger":2,"./lib/gelement":4,"./lib/glob":5,"./lib/graphics":6,"./lib/keyboard":7,"./lib/log":8,"./lib/mouse":9,"./lib/physics":10,"./lib/sprite":11,"./lib/spriteset":12}],2:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -247,7 +249,7 @@ var GameDebugger = function () {
 
 module.exports = GameDebugger;
 
-},{"./dom":3,"./glob":5,"./log":7}],3:[function(require,module,exports){
+},{"./dom":3,"./glob":5,"./log":8}],3:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -323,6 +325,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 var log = require('./log');
 var d = require('./dom');
 var Physics = require('./physics');
+var Keyboard = require('./keyboard');
 
 var GraphicElement = function () {
     function GraphicElement(type, extra) {
@@ -334,6 +337,9 @@ var GraphicElement = function () {
         this.vector = new Physics.Vector2D(this.options.x || 0, this.options.y || 0);
         this.rect = new Physics.Vector2D(this.options.w || 0, this.options.h || 0);
 
+        this.controlled = false;
+        this.key;
+
         switch (this.type) {
             case "image":
                 this.initImage(this.options.url);
@@ -344,6 +350,7 @@ var GraphicElement = function () {
                 this.initSprite(this.options.sprite);
                 break;
 
+            // TODO : Handle vector shapes
             case "shape":
                 this.initShape(extra);
                 break;
@@ -364,6 +371,7 @@ var GraphicElement = function () {
         key: 'initSprite',
         value: function initSprite(sprite) {
             this.sprite = sprite;
+            this.key = sprite;
             this.draw = this.drawSprite;
         }
     }, {
@@ -371,6 +379,7 @@ var GraphicElement = function () {
         value: function initImage(url) {
             this.url = url;
             this.image = new Image();
+            this.key = this.image;
             this.draw = this.drawImage;
             log('GElement', "Initialized Graphic Element with image at " + this.url);
         }
@@ -400,20 +409,85 @@ var GraphicElement = function () {
     }, {
         key: 'drawImage',
         value: function drawImage(context) {
+            this.vector.update();
             this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
         }
     }, {
         key: 'drawSprite',
         value: function drawSprite(context) {
-            this.sprite.draw(context);
+            this.vector.update();
+            this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
         }
     }, {
         key: 'drawShape',
-        value: function drawShape() {}
+        value: function drawShape(context) {}
     }, {
         key: 'draw',
         value: function draw(context) {
             throw new Error("Tried to draw a GElement with an invalid type : " + this.type);
+        }
+    }, {
+        key: 'keyCommand',
+        value: function keyCommand(which) {
+            switch (which) {
+                case "right":
+                    this.vector.setVelocity(3, this.vector.vely);
+                    if (this.sprite) {
+                        this.sprite.changeState(this.movingstate, "right");
+                    }
+                    break;
+
+                case "left":
+                    this.vector.setVelocity(-3, this.vector.vely);
+                    if (this.sprite) {
+                        this.sprite.changeState(this.movingstate, "left");
+                    }
+                    break;
+
+                case "release":
+                    this.vector.setVelocity(0, this.vector.vely);
+                    if (this.sprite) {
+                        this.sprite.changeState();
+                    }
+                    break;
+
+                default:
+            }
+        }
+    }, {
+        key: 'control',
+        value: function control(keyboard) {
+            var _this2 = this;
+
+            var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+            this.controlled = true;
+            this.keyboard = keyboard;
+            this.movingstate = options.movingstate || "running";
+
+            log('GElement', "Binding Graphic Element with keyboard controls");
+            if (options.arrows) {
+                this.keventleft = function () {
+                    _this2.keyCommand('left');
+                };
+                this.keventright = function () {
+                    _this2.keyCommand('right');
+                };
+
+                keyboard.bindKey('left', this.keventleft);
+                keyboard.bindKey('right', this.keventright);
+            }
+
+            this.keventreleased = function () {
+                _this2.keyCommand('release');
+            };
+            keyboard.bindKeyUp(this.keventreleased);
+        }
+    }, {
+        key: 'giveupControll',
+        value: function giveupControll() {
+            keyboard.killKey('left', this.keventleft);
+            keyboard.killKey('right', this.keventright);
         }
     }, {
         key: 'destroy',
@@ -421,6 +495,9 @@ var GraphicElement = function () {
             log('GElement', 'Destroyed Graphic Element of type ' + this.type);
             this.imagebitmap && this.imagebitmap.close();
             this.image && this.image.remove();
+            if (this.controlled) {
+                this.giveupControll();
+            }
         }
     }]);
 
@@ -429,7 +506,7 @@ var GraphicElement = function () {
 
 module.exports = GraphicElement;
 
-},{"./dom":3,"./log":7,"./physics":9}],5:[function(require,module,exports){
+},{"./dom":3,"./keyboard":7,"./log":8,"./physics":10}],5:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -543,7 +620,114 @@ var Graphics = function () {
 
 module.exports = Graphics;
 
-},{"./log":7}],7:[function(require,module,exports){
+},{"./log":8}],7:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var log = require('./log');
+var glob = require('./glob');
+
+var keymap = {
+    up: 38,
+    down: 40,
+    left: 37,
+    right: 39,
+    space: 32,
+    shift: 16,
+    enter: 13
+};
+
+var Keyboard = function () {
+    function Keyboard(canvas) {
+        var _this = this;
+
+        _classCallCheck(this, Keyboard);
+
+        this.canvas = canvas;
+
+        log('Keyboard', "Binding global key events");
+        this.keyEvents = {
+            /* up    */38: [],
+            /* down  */40: [],
+            /* left  */37: [],
+            /* right */39: [],
+            /* space */32: [],
+            /* shift */16: [],
+            /* enter */13: []
+        };
+
+        this.upEvents = [];
+
+        glob.addEventListener('keydown', function (ev) {
+            _this.down(ev);
+        });
+        glob.addEventListener('keyup', function (ev) {
+            _this.up(ev);
+        });
+    }
+
+    _createClass(Keyboard, [{
+        key: 'down',
+        value: function down(ev) {
+            if (this.keyEvents[ev.which]) {
+                this.keyEvents[ev.which].forEach(function (ev) {
+                    return ev();
+                });
+            }
+        }
+    }, {
+        key: 'up',
+        value: function up(ev) {
+            this.upEvents.forEach(function (ev) {
+                return ev();
+            });
+        }
+    }, {
+        key: 'bindKey',
+        value: function bindKey(key, bind, sender) {
+            log('Keyboard', "Bound key with id " + key);
+            this.keyEvents[keymap[key] || key].push(sender ? bind.bind(sender) : bind);
+        }
+    }, {
+        key: 'bindKeyUp',
+        value: function bindKeyUp(bind, sender) {
+            this.upEvents.push(sender ? bind.bind(sender) : bind);
+        }
+    }, {
+        key: 'killKey',
+        value: function killKey(key, bound) {
+            var events = this.keyEvents[keymap[key] || key];
+            var index = events.indexOf(function (x) {
+                return x == bound;
+            });
+
+            if (index != -1) {
+                events.splice(index, 1);
+            }
+        }
+    }, {
+        key: 'killKeyUp',
+        value: function killKeyUp(bound) {
+            var events = this.upEvents;
+            var index = events.indexOf(function (x) {
+                return x == bound;
+            });
+
+            if (index != -1) {
+                events.splice(index, 1);
+            }
+        }
+    }]);
+
+    return Keyboard;
+}();
+
+module.exports = Keyboard;
+
+},{"./glob":5,"./log":8}],8:[function(require,module,exports){
 "use strict";
 
 var glob = require('./glob.js');
@@ -561,7 +745,7 @@ log.listen = function (cb) {
 
 module.exports = glob.__SIDESCROLLGAME.env == "dev" ? log : noOp;
 
-},{"./glob.js":5}],8:[function(require,module,exports){
+},{"./glob.js":5}],9:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -626,7 +810,7 @@ var GameMouse = function () {
 
 module.exports = GameMouse;
 
-},{"./log":7,"./physics":9}],9:[function(require,module,exports){
+},{"./log":8,"./physics":10}],10:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -642,6 +826,12 @@ var Vector2D = function () {
 
         this.destx = destx;
         this.desty = desty;
+
+        this.velx = 0;
+        this.vely = 0;
+
+        this.accelx = 0;
+        this.accely = 0;
     }
 
     _createClass(Vector2D, [{
@@ -657,6 +847,27 @@ var Vector2D = function () {
             this.desty = desty;
         }
     }, {
+        key: "setVelocity",
+        value: function setVelocity(x, y) {
+            this.velx = x;
+            this.vely = y;
+        }
+    }, {
+        key: "setAcceleration",
+        value: function setAcceleration(x, y) {
+            this.accelx = x;
+            this.accely = y;
+        }
+    }, {
+        key: "update",
+        value: function update() {
+            this.velx += this.accelx;
+            this.vely += this.accely;
+
+            this.x += this.velx;
+            this.y += this.vely;
+        }
+    }, {
         key: "length",
         value: function length() {
             return Math.sqrt(Math.pow(this.x - this.destx, 2) + Math.pow(this.y - this.desty, 2));
@@ -668,7 +879,7 @@ var Vector2D = function () {
 
 module.exports = { Vector2D: Vector2D };
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -686,9 +897,9 @@ var Sprite = function () {
 
         this.options = options;
         this.state = options.state || "neutral";
+        this.initialstate = this.state;
         this.spritesets = options.spritesets || {};
-        this.position = options.potision || new Physics.Vector2D(options.x || 0, options.y || 0);
-        this.box = options.box || new Physics.Vector2D(options.w || 0, options.h || 0);
+        this.facing = options.facing || "right";
     }
 
     _createClass(Sprite, [{
@@ -698,8 +909,9 @@ var Sprite = function () {
         }
     }, {
         key: 'changeState',
-        value: function changeState(statename) {
-            this.state = statename;
+        value: function changeState(statename, facing) {
+            this.state = statename || this.initialstate;
+            this.facing = facing || this.facing;
         }
     }, {
         key: 'updateState',
@@ -708,8 +920,15 @@ var Sprite = function () {
         }
     }, {
         key: 'draw',
-        value: function draw(context) {
-            this.currentState.draw(context, this.position, this.box);
+        value: function draw(context, x, y, w, h) {
+            context.save();
+            if (this.facing == "right") {
+                this.currentState.draw(context, x, y, w, h);
+            } else if (this.facing == "left") {
+                context.scale(-1, 1);
+                this.currentState.draw(context, -x - w, y, w, h);
+            }
+            context.restore();
         }
     }, {
         key: 'currentState',
@@ -723,7 +942,7 @@ var Sprite = function () {
 
 module.exports = Sprite;
 
-},{"./log":7,"./physics":9}],11:[function(require,module,exports){
+},{"./log":8,"./physics":10}],12:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -819,8 +1038,8 @@ var SpriteSet = function () {
         }
     }, {
         key: 'draw',
-        value: function draw(context, position, box) {
-            this.ready && context.drawImage(this.currentFrame, position.x, position.y, box.x, box.y);
+        value: function draw(context, x, y, w, h) {
+            this.ready && context.drawImage(this.currentFrame, x, y, w, h);
             this.drew++;
             if (this.drew == this.framestateupdate) {
                 this.drew = 0;
@@ -842,4 +1061,4 @@ var SpriteSet = function () {
 
 module.exports = SpriteSet;
 
-},{"./log":7}]},{},[1]);
+},{"./log":8}]},{},[1]);

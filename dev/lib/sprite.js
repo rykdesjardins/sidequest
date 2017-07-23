@@ -5,17 +5,18 @@ class Sprite {
     constructor(options = {}) {
         this.options = options;
         this.state = options.state || "neutral";
+        this.initialstate = this.state;
         this.spritesets = options.spritesets || {};
-        this.position = options.potision || new Physics.Vector2D(options.x || 0, options.y || 0);
-        this.box = options.box || new Physics.Vector2D(options.w || 0, options.h || 0);
+        this.facing = options.facing || "right";
     }
 
     addState(statename, spriteset) {
         this.spritesets[statename] = spriteset;
     }
 
-    changeState(statename) {
-        this.state = statename;
+    changeState(statename, facing) {
+        this.state = statename || this.initialstate;
+        this.facing = facing || this.facing;
     }
 
     get currentState() {
@@ -26,8 +27,15 @@ class Sprite {
         this.currentState.nextFrame();
     }
 
-    draw(context) {
-        this.currentState.draw(context, this.position, this.box);
+    draw(context, x, y, w, h) {
+        context.save();
+        if (this.facing == "right") {
+            this.currentState.draw(context, x, y, w, h);
+        } else if (this.facing == "left") {
+            context.scale(-1, 1);
+            this.currentState.draw(context, -x - w, y, w, h);
+        }
+        context.restore();
     }
 }
 
