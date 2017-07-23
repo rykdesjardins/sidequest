@@ -78,11 +78,17 @@ var Game = function () {
     }, {
         key: 'resize',
         value: function resize() {
-            this.canvas.width = glob.innerWidth;
-            this.canvas.height = glob.innerHeight;
-            this.graphics.resize(glob.innerWidth, glob.innerHeight);
+            var width = glob.innerWidth;
+            var height = glob.innerHeight - (this.gamedebugger.init ? 200 : 0);
 
-            log("Game", 'Handled resized at ' + glob.innerWidth + ' x ' + glob.innerHeight);
+            this.canvas.width = width;
+            this.canvas.height = height;
+
+            this.width = width;
+            this.height = height;
+
+            this.graphics.resize(width, height);
+            log("Game", 'Handled resized at ' + width + ' x ' + height);
         }
     }, {
         key: 'bindResize',
@@ -331,23 +337,28 @@ var defaultoptions = {
     x: 0, y: 0, w: 0, h: 0,
     initspeed: 1,
     maxspeed: 3,
+    gravity: 0,
+    jumpheight: 0,
     controlled: false,
     friction: 0.2
 };
 
 var GraphicElement = function () {
-    function GraphicElement(type, extra) {
+    function GraphicElement(game, type, extra) {
         _classCallCheck(this, GraphicElement);
 
+        this.game = game;
         this.ready = false;
         this.type = type;
         this.options = Object.assign(defaultoptions, extra || {});
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
 
-        this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxspeed);
+        this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
         this.controlled = this.options.controlled;
+        this.options.gravity && this.applyGravity(this.options.gravity);
+
         this.key;
 
         switch (this.type) {
@@ -414,18 +425,40 @@ var GraphicElement = function () {
             this.image.src = this.url;
         }
     }, {
+        key: 'applyGravity',
+        value: function applyGravity(gravity) {
+            this.vector.setAcceleration(this.vector.accelx, gravity);
+        }
+    }, {
         key: 'initShape',
         value: function initShape(info) {}
+    }, {
+        key: 'isOnFloor',
+        value: function isOnFloor() {
+            return this.vector.y >= this.game.height - this.rect.y;
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            if (this.options.gravity) {
+                if (this.isOnFloor()) {
+                    this.vector.y = this.game.height - this.rect.y;
+                    this.vector.vely = 0;
+                }
+            }
+        }
     }, {
         key: 'drawImage',
         value: function drawImage(context) {
             this.vector.update();
+            this.update();
             this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
         }
     }, {
         key: 'drawSprite',
         value: function drawSprite(context) {
             this.vector.update();
+            this.update();
             this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
         }
     }, {
@@ -435,6 +468,16 @@ var GraphicElement = function () {
         key: 'draw',
         value: function draw(context) {
             throw new Error("Tried to draw a GElement with an invalid type : " + this.type);
+        }
+    }, {
+        key: 'jump',
+        value: function jump() {
+            if (this.isOnFloor()) {
+                if (this.sprite) {
+                    this.sprite.changeState('jumping');
+                }
+                this.vector.vely = -this.options.jumpheight;
+            }
         }
     }, {
         key: 'keyCommand',
@@ -459,6 +502,10 @@ var GraphicElement = function () {
                         if (this.sprite) {
                             this.sprite.changeState(this.movingstate, "left");
                         }
+                        break;
+
+                    case Keyboard.KEY_SPACE:
+                        this.jump();
                         break;
 
                     default:
@@ -492,9 +539,13 @@ var GraphicElement = function () {
                 this.keventright = function (which, pressed) {
                     return _this2.keyCommand(which, pressed);
                 };
+                this.keventspace = function (which, pressed) {
+                    return _this2.keyCommand(which, pressed);
+                };
 
                 keyboard.bindKey('left', this.keventleft);
                 keyboard.bindKey('right', this.keventright);
+                keyboard.bindKey('space', this.keventspace);
             }
         }
     }, {
@@ -502,6 +553,7 @@ var GraphicElement = function () {
         value: function giveupControll() {
             keyboard.killKey('left', this.keventleft);
             keyboard.killKey('right', this.keventright);
+            keyboard.killKey('space', this.keventspace);
         }
     }, {
         key: 'destroy',
@@ -731,6 +783,8 @@ var Keyboard = function () {
             this.keyEvents[byte] = name;
             keymap[name] = byte;
             keystate[byte] = false;
+
+            log('Keyboard', 'Registered new key ' + name + ' with byte ' + byte);
         }
     }, {
         key: 'down',
@@ -750,10 +804,12 @@ var Keyboard = function () {
     }, {
         key: 'up',
         value: function up(ev) {
-            keystate[ev.which] = false;
-            this.keyEvents[ev.which].forEach(function (cb) {
-                return cb(ev.which, false);
-            });
+            if (this.keyEvents[ev.which] && keystate[ev.which]) {
+                keystate[ev.which] = false;
+                this.keyEvents[ev.which].forEach(function (cb) {
+                    return cb(ev.which, false);
+                });
+            }
         }
     }, {
         key: 'bindKey',

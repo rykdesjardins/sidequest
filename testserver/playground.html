@@ -9,20 +9,23 @@
         <script src="//localhost:8088/build/compiled.js"></script>
         <script>
             var game = new SideQuest.Game("gamecontainer", {env : "dev"}).start();
-            var cloud = new SideQuest.GraphicElement("image", {url : "/cloud.png", preload : true});
+            var cloud = new SideQuest.GraphicElement(game, "image", {url : "/cloud.png", preload : true});
             cloud.setPosition(40, 20);
             game.graphics.addElement(0, 'cloud', cloud)
 
-            var player = new SideQuest.GraphicElement("sprite", {
-                x : 20, y : 200,
+            var player = new SideQuest.GraphicElement(game, "sprite", {
+                x : 20, y : 20,
                 w : 120, h : 100,
 
-                initspeed : 1, maxspeed : 3, friction : 0.2,
+                initspeed : 1,   maxspeed   : 7,    friction   : 0.2,
+                gravity   : 0.5, maxgravity : 15,   jumpheight : 10,
 
                 sprite : new SideQuest.Sprite({
                     spritesets : {
                         neutral : new SideQuest.SpriteSet('fileset', '/cat/Idle ($).png', 8, 5),
-                        running : new SideQuest.SpriteSet('fileset', '/cat/Run ($).png', 8, 5)
+                        running : new SideQuest.SpriteSet('fileset', '/cat/Run ($).png', 8, 5),
+                        jumping : new SideQuest.SpriteSet('fileset', '/cat/Jump ($).png', 8, 5),
+                        falling : new SideQuest.SpriteSet('fileset', '/cat/Fall ($).png', 8, 5)
                     }
                 })
             });

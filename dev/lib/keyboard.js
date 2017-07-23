@@ -65,8 +65,10 @@ class Keyboard {
     }
 
     up(ev) {
-        keystate[ev.which] = false;
-        this.keyEvents[ev.which].forEach(cb => cb(ev.which, false));
+        if (this.keyEvents[ev.which] && keystate[ev.which]) {
+            keystate[ev.which] = false;
+            this.keyEvents[ev.which].forEach(cb => cb(ev.which, false));
+        }
     }
 
     bindKey(key, bind, sender) {

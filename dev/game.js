@@ -59,11 +59,17 @@ class Game {
     }
 
     resize() {
-        this.canvas.width  = glob.innerWidth;
-        this.canvas.height = glob.innerHeight;
-        this.graphics.resize(glob.innerWidth, glob.innerHeight);
+        const width  = glob.innerWidth;
+        const height = glob.innerHeight - (this.gamedebugger.init ? 200 : 0);
 
-        log("Game", `Handled resized at ${glob.innerWidth} x ${glob.innerHeight}`);
+        this.canvas.width  = width;
+        this.canvas.height = height;       
+        
+        this.width  = width;
+        this.height = height;
+
+        this.graphics.resize(width, height);
+        log("Game", `Handled resized at ${width} x ${height}`);
     }
 
     bindResize() {

@@ -7,21 +7,26 @@ const defaultoptions = {
     x : 0, y : 0, w : 0, h : 0,
     initspeed : 1,
     maxspeed : 3,
+    gravity : 0,
+    jumpheight : 0,
     controlled : false,
     friction : 0.2
 };
 
 class GraphicElement {
-    constructor(type, extra) {
+    constructor(game, type, extra) {
+        this.game = game;
         this.ready = false;
         this.type = type;
         this.options = Object.assign(defaultoptions, extra || {});
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
 
-        this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxspeed);
+        this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
         this.controlled = this.options.controlled;
+        this.options.gravity && this.applyGravity(this.options.gravity);
+
         this.key;
 
         switch (this.type) {
@@ -81,17 +86,36 @@ class GraphicElement {
         this.image.src = this.url;
     }
 
+    applyGravity(gravity) {
+        this.vector.setAcceleration(this.vector.accelx, gravity);
+    }
+
     initShape(info) {
 
     }
 
+    isOnFloor() {
+        return this.vector.y >= (this.game.height - this.rect.y);
+    }
+
+    update() {
+        if (this.options.gravity) {
+            if (this.isOnFloor()) {
+                this.vector.y = this.game.height - this.rect.y;
+                this.vector.vely = 0;
+            }
+        }
+    }
+
     drawImage(context) {
         this.vector.update();
+        this.update();
         this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
     }
 
     drawSprite(context) {
         this.vector.update();
+        this.update();
         this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
     }
 
@@ -101,6 +125,15 @@ class GraphicElement {
 
     draw(context) {
         throw new Error("Tried to draw a GElement with an invalid type : " + this.type);
+    }
+
+    jump() {
+        if (this.isOnFloor()) {
+            if (this.sprite) {
+                // this.sprite.changeState('jumping');
+            }
+            this.vector.vely = -this.options.jumpheight;
+        }
     }
 
     keyCommand(which, pressed) {
@@ -124,6 +157,10 @@ class GraphicElement {
                     if (this.sprite) {
                         this.sprite.changeState(this.movingstate, "left");
                     }
+                    break;
+
+                case Keyboard.KEY_SPACE:
+                    this.jump();
                     break;
                     
 
@@ -149,15 +186,18 @@ class GraphicElement {
         if (options.arrows) {
             this.keventleft  = (which, pressed) => this.keyCommand(which, pressed); 
             this.keventright = (which, pressed) => this.keyCommand(which, pressed); 
+            this.keventspace = (which, pressed) => this.keyCommand(which, pressed); 
 
             keyboard.bindKey('left',  this.keventleft);
             keyboard.bindKey('right', this.keventright);
+            keyboard.bindKey('space', this.keventspace);
         }
     }
 
     giveupControll() {
         keyboard.killKey('left', this.keventleft);
         keyboard.killKey('right',this.keventright);
+        keyboard.killKey('space',this.keventspace);
     }
 
     destroy() {
