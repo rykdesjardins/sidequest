@@ -25,7 +25,7 @@ class GameDebugger {
     }
 
     bindError() {
-        glob.onerror = () => this.error(...arguments);
+        glob.onerror = (a,b,c,d,e) => this.error(a,b,c,d,e);
     }
 
     addStylesheet() {
@@ -77,7 +77,7 @@ class GameDebugger {
 
     error(msg, url, lineNo, columnNo, error) {
         d.create({node : "div", text : msg, attr : {style : "color : red;"}, parent : this.outputelem});
-        d.create({node : "pre", html : error.stack, attr : {style : "color : red;"}, parent : this.outputelem});
+        d.create({node : "pre", html : error && error.stack, attr : {style : "color : red;"}, parent : this.outputelem});
     }
 }
 

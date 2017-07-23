@@ -10,6 +10,10 @@ var log = require('./lib/log');
 var Debugger = require('./lib/debugger');
 var Mouse = require('./lib/mouse');
 var Graphics = require('./lib/graphics');
+var SpriteSet = require('./lib/spriteset');
+var Sprite = require('./lib/sprite');
+var GraphicElement = require('./lib/gelement');
+var Physics = require('./lib/physics');
 
 var Game = function () {
     _createClass(Game, null, [{
@@ -129,13 +133,9 @@ var Game = function () {
     return Game;
 }();
 
-glob.SideQuest = {
-    Game: Game,
-    GraphicElement: require('./lib/gelement'),
-    Physics: require('./lib/physics')
-};
+glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics };
 
-},{"./lib/debugger":2,"./lib/gelement":4,"./lib/glob":5,"./lib/graphics":6,"./lib/log":7,"./lib/mouse":8,"./lib/physics":9}],2:[function(require,module,exports){
+},{"./lib/debugger":2,"./lib/gelement":4,"./lib/glob":5,"./lib/graphics":6,"./lib/log":7,"./lib/mouse":8,"./lib/physics":9,"./lib/sprite":10,"./lib/spriteset":11}],2:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -171,11 +171,10 @@ var GameDebugger = function () {
     }, {
         key: 'bindError',
         value: function bindError() {
-            var _this = this,
-                _arguments = arguments;
+            var _this = this;
 
-            glob.onerror = function () {
-                return _this.error.apply(_this, _arguments);
+            glob.onerror = function (a, b, c, d, e) {
+                return _this.error(a, b, c, d, e);
             };
         }
     }, {
@@ -239,7 +238,7 @@ var GameDebugger = function () {
         key: 'error',
         value: function error(msg, url, lineNo, columnNo, _error) {
             d.create({ node: "div", text: msg, attr: { style: "color : red;" }, parent: this.outputelem });
-            d.create({ node: "pre", html: _error.stack, attr: { style: "color : red;" }, parent: this.outputelem });
+            d.create({ node: "pre", html: _error && _error.stack, attr: { style: "color : red;" }, parent: this.outputelem });
         }
     }]);
 
@@ -341,6 +340,10 @@ var GraphicElement = function () {
                 this.options.preload && this.preload();
                 break;
 
+            case "sprite":
+                this.initSprite(this.options.sprite);
+                break;
+
             case "shape":
                 this.initShape(extra);
                 break;
@@ -356,6 +359,12 @@ var GraphicElement = function () {
         key: 'setPosition',
         value: function setPosition(x, y) {
             this.vector.at(x, y);
+        }
+    }, {
+        key: 'initSprite',
+        value: function initSprite(sprite) {
+            this.sprite = sprite;
+            this.draw = this.drawSprite;
         }
     }, {
         key: 'initImage',
@@ -378,6 +387,7 @@ var GraphicElement = function () {
                     }
 
                     log('GElement', "Preloaded Graphic Element with image at " + _this.url);
+                    _this.ready = true;
                     _this.options.preloadcallback && _this.options.preloadcallback(_this);
                 });
             };
@@ -391,6 +401,11 @@ var GraphicElement = function () {
         key: 'drawImage',
         value: function drawImage(context) {
             this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
+        }
+    }, {
+        key: 'drawSprite',
+        value: function drawSprite(context) {
+            this.sprite.draw(context);
         }
     }, {
         key: 'drawShape',
@@ -653,4 +668,178 @@ var Vector2D = function () {
 
 module.exports = { Vector2D: Vector2D };
 
-},{}]},{},[1]);
+},{}],10:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var log = require('./log');
+var Physics = require('./physics');
+
+var Sprite = function () {
+    function Sprite() {
+        var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+
+        _classCallCheck(this, Sprite);
+
+        this.options = options;
+        this.state = options.state || "neutral";
+        this.spritesets = options.spritesets || {};
+        this.position = options.potision || new Physics.Vector2D(options.x || 0, options.y || 0);
+        this.box = options.box || new Physics.Vector2D(options.w || 0, options.h || 0);
+    }
+
+    _createClass(Sprite, [{
+        key: 'addState',
+        value: function addState(statename, spriteset) {
+            this.spritesets[statename] = spriteset;
+        }
+    }, {
+        key: 'changeState',
+        value: function changeState(statename) {
+            this.state = statename;
+        }
+    }, {
+        key: 'updateState',
+        value: function updateState() {
+            this.currentState.nextFrame();
+        }
+    }, {
+        key: 'draw',
+        value: function draw(context) {
+            this.currentState.draw(context, this.position, this.box);
+        }
+    }, {
+        key: 'currentState',
+        get: function get() {
+            return this.spritesets[this.state];
+        }
+    }]);
+
+    return Sprite;
+}();
+
+module.exports = Sprite;
+
+},{"./log":7,"./physics":9}],11:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var log = require('./log');
+
+var SpriteState = function SpriteState(bitmap, index) {
+    _classCallCheck(this, SpriteState);
+
+    this.bitmap = bitmap;
+    this.index = index;
+};
+
+var SpriteSet = function () {
+    function SpriteSet(type, urlscheme, totalstates, framestateupdate) {
+        _classCallCheck(this, SpriteSet);
+
+        this.type = type;
+        this.url = urlscheme;
+        this.frame = 0;
+        this.framestateupdate = framestateupdate || 10;
+        this.drew = 0;
+        this.ready = false;
+        this.totalstates = totalstates;
+        this.states = [];
+
+        log('SpriteSet', 'Creating new Sprite Set from ' + urlscheme + ' with ' + totalstates + ' states');
+        if (type === "singleimage") {
+            // TODO : Handle multiple states in single image
+        } else if (type === "fileset") {
+            this.load();
+        } else {
+            throw new Error("Created a SpriteSet with an invalid type : " + type);
+        }
+    }
+
+    _createClass(SpriteSet, [{
+        key: 'getImageFromURL',
+        value: function getImageFromURL(url, send) {
+            var img = new Image();
+            img.onload = function () {
+                createImageBitmap(img).then(function (bitmap) {
+                    send(bitmap);
+                });
+            };
+
+            img.src = url;
+        }
+    }, {
+        key: 'previousFrame',
+        value: function previousFrame() {
+            this.frame--;
+            if (this.frame < 0) {
+                this.frame = this.totalstates - 1;
+            }
+        }
+    }, {
+        key: 'nextFrame',
+        value: function nextFrame() {
+            this.frame++;
+            if (this.frame == this.totalstates) {
+                this.frame = 0;
+            }
+        }
+    }, {
+        key: 'load',
+        value: function load(done) {
+            var _this = this;
+
+            if (this.type == "singleimage") {
+                // TODO : Handle loading states from one image
+            } else if (this.type == "fileset") {
+                log('SpriteSet', 'Loading states from url scheme ' + this.url);
+                var imageIndex = -1;
+                var loadNextImage = function loadNextImage() {
+                    if (++imageIndex == _this.totalstates) {
+                        _this.ready = true;
+                        log('SpriteSet', 'Done loading states for SpriteSet with url ' + _this.url);
+
+                        return done && done();
+                    }
+
+                    _this.getImageFromURL(_this.url.replace('$', imageIndex + 1), function (bitmap) {
+                        _this.states.push(bitmap);
+                        loadNextImage();
+                    });
+                };
+
+                loadNextImage();
+            }
+        }
+    }, {
+        key: 'draw',
+        value: function draw(context, position, box) {
+            this.ready && context.drawImage(this.currentFrame, position.x, position.y, box.x, box.y);
+            this.drew++;
+            if (this.drew == this.framestateupdate) {
+                this.drew = 0;
+                this.nextFrame();
+            }
+        }
+    }, {
+        key: 'destroy',
+        value: function destroy() {}
+    }, {
+        key: 'currentFrame',
+        get: function get() {
+            return this.states[this.frame];
+        }
+    }]);
+
+    return SpriteSet;
+}();
+
+module.exports = SpriteSet;
+
+},{"./log":7}]},{},[1]);

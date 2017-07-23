@@ -3,6 +3,10 @@ const log = require('./lib/log');
 const Debugger = require('./lib/debugger');
 const Mouse = require('./lib/mouse');
 const Graphics = require('./lib/graphics');
+const SpriteSet = require('./lib/spriteset');
+const Sprite = require('./lib/sprite');
+const GraphicElement = require('./lib/gelement');
+const Physics = require('./lib/physics');
 
 class Game {
     static defaults() {
@@ -91,8 +95,4 @@ class Game {
     }
 }
 
-glob.SideQuest = {
-    Game,
-    GraphicElement : require('./lib/gelement'),
-    Physics : require('./lib/physics')
-}
+glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics }

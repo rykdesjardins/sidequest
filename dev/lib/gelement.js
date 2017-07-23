@@ -16,6 +16,10 @@ class GraphicElement {
                 this.options.preload && this.preload();
                 break;
 
+            case "sprite":
+                this.initSprite(this.options.sprite);
+                break;
+
             case "shape": 
                 this.initShape(extra);
                 break;
@@ -29,6 +33,11 @@ class GraphicElement {
 
     setPosition(x, y) {
         this.vector.at(x, y);
+    }
+
+    initSprite(sprite) {
+        this.sprite = sprite;
+        this.draw = this.drawSprite;
     }
 
     initImage(url) {
@@ -47,6 +56,7 @@ class GraphicElement {
                 }
 
                 log('GElement', "Preloaded Graphic Element with image at " + this.url);
+                this.ready = true;
                 this.options.preloadcallback && this.options.preloadcallback(this);
             });
         }
@@ -60,6 +70,10 @@ class GraphicElement {
 
     drawImage(context) {
         this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
+    }
+
+    drawSprite(context) {
+        this.sprite.draw(context);
     }
 
     drawShape() {
