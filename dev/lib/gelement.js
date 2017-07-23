@@ -109,6 +109,7 @@ class GraphicElement {
                 case Keyboard.KEY_RIGHT : 
                     this.vector.setVelocity(this.options.initspeed, this.vector.vely);
                     this.direction = "right";
+                    this.keydown = true;
                     this.vector.setAcceleration(this.options.friction, this.vector.accely);
                     if (this.sprite) {
                         this.sprite.changeState(this.movingstate, "right");
@@ -118,6 +119,7 @@ class GraphicElement {
                 case Keyboard.KEY_LEFT : 
                     this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
                     this.direction = "left";
+                    this.keydown = true;
                     this.vector.setAcceleration(-this.options.friction, this.vector.accely);
                     if (this.sprite) {
                         this.sprite.changeState(this.movingstate, "left");
@@ -127,7 +129,8 @@ class GraphicElement {
 
                 default:
             }
-        } else if (which == Keyboard.KEY_LEFT || which == Keyboard.KEY_RIGHT) {
+        } else if (this.keydown && (which == Keyboard.KEY_LEFT || which == Keyboard.KEY_RIGHT)) {
+            this.keydown = false;
             let mod = this.direction == "left" ? 1 : -1;
             this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
 
