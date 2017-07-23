@@ -8,7 +8,10 @@
 
         <script src="//localhost:8088/build/compiled.js"></script>
         <script>
-            window.game = new Game("gamecontainer", {env : "dev"}).start();
+            var game = new SideQuest.Game("gamecontainer", {env : "dev"}).start();
+            var cloud = new SideQuest.GraphicElement("image", {url : "/cloud.png", preload : true});
+            cloud.setPosition(40, 20);
+            game.graphics.addElement(0, 'cloud', cloud)
         </script>
     </body>
 </html>

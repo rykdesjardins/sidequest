@@ -7,6 +7,11 @@ class Vector2D {
         this.desty = desty;
     }
 
+    at(x, y) {
+        this.x = x;
+        this.y = y;
+    }
+
     to(destx, desty) {
         this.destx = destx;
         this.desty = desty;

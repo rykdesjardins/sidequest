@@ -9,6 +9,7 @@ class Game {
         return {
             bgcolor : "#eaeff2",
             fps : 60,
+            layers : 5,
             env : "prod"
         };
     }
@@ -71,6 +72,7 @@ class Game {
 
     update() {
         this.graphics.clear();
+        this.graphics.draw();
         this.gamedebugger.ping();
         return this;
     }
@@ -89,4 +91,8 @@ class Game {
     }
 }
 
-glob.Game = Game;
+glob.SideQuest = {
+    Game,
+    GraphicElement : require('./lib/gelement'),
+    Physics : require('./lib/physics')
+}
