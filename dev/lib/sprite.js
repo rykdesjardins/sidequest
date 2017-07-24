@@ -15,8 +15,13 @@ class Sprite {
     }
 
     changeState(statename, facing) {
+        let ogstate = this.state;
         this.state = statename || this.initialstate;
         this.facing = facing || this.facing;
+
+        if (ogstate != this.state) {
+            this.currentState.resetFrame();
+        }
     }
 
     get currentState() {

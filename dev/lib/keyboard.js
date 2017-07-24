@@ -68,6 +68,11 @@ class Keyboard {
         if (this.keyEvents[ev.which] && keystate[ev.which]) {
             keystate[ev.which] = false;
             this.keyEvents[ev.which].forEach(cb => cb(ev.which, false));
+
+            for (let key in keymap) {
+                let byte = keymap[key];
+                keystate[byte] && this.keyEvents[byte] && this.keyEvents[byte].forEach(cb => cb(byte, true, true));
+            }
         }
     }
 

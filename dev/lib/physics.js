@@ -58,7 +58,7 @@ class Vector2D {
             this.vely = this.maxvely * (this.vely < 0 ? -1 : 1);
         }
 
-        if (this.breakatzerox && ((ogvelx > 0 && this.velx < 0) || (ogvelx < 0 && this.velx > 0))) {
+        if (this.breakatzerox && ((ogvelx > 0 && this.velx <= 0) || (ogvelx < 0 && this.velx >= 0))) {
             this.accelx = 0;
             this.velx = 0;
         }

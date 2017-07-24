@@ -8,7 +8,7 @@ class SpriteState {
 }
 
 class SpriteSet {
-    constructor(type, urlscheme, totalstates, framestateupdate) {
+    constructor(type, urlscheme, totalstates, framestateupdate, noloop) {
         this.type = type;
         this.url = urlscheme;
         this.frame = 0;
@@ -16,6 +16,7 @@ class SpriteSet {
         this.drew = 0;
         this.ready = false;
         this.totalstates = totalstates;
+        this.noloop = noloop;
         this.states = [];
 
         log('SpriteSet', 'Creating new Sprite Set from ' + urlscheme + ' with ' + totalstates + ' states');
@@ -43,6 +44,10 @@ class SpriteSet {
         img.src = url;
     }
 
+    resetFrame() {
+        this.frame = 0;
+    }
+
     previousFrame() {
         this.frame--;
         if (this.frame < 0) {
@@ -53,7 +58,7 @@ class SpriteSet {
     nextFrame() {
         this.frame++;
         if (this.frame == this.totalstates) {
-            this.frame = 0;
+            this.frame = this.noloop ? this.frame -1 : 0;
         }
     }
 

@@ -17,15 +17,15 @@
                 x : 20, y : 20,
                 w : 120, h : 100,
 
-                initspeed : 1,   maxspeed   : 7,    friction   : 0.2,
+                initspeed : 1,   maxspeed   : 7,    friction   : 0.4,
                 gravity   : 0.5, maxgravity : 15,   jumpheight : 10,
 
                 sprite : new SideQuest.Sprite({
                     spritesets : {
-                        neutral : new SideQuest.SpriteSet('fileset', '/cat/Idle ($).png', 8, 5),
-                        running : new SideQuest.SpriteSet('fileset', '/cat/Run ($).png', 8, 5),
-                        jumping : new SideQuest.SpriteSet('fileset', '/cat/Jump ($).png', 8, 5),
-                        falling : new SideQuest.SpriteSet('fileset', '/cat/Fall ($).png', 8, 5)
+                        neutral : new SideQuest.SpriteSet('fileset', '/char/Idle ($).png', 10, 4),
+                        running : new SideQuest.SpriteSet('fileset', '/char/Run ($).png', 8, 4),
+                        jumping : new SideQuest.SpriteSet('fileset', '/char/Jump ($).png', 8, 2, true),
+                        falling : new SideQuest.SpriteSet('fileset', '/char/Fall ($).png', 8, 3, true)
                     }
                 })
             });

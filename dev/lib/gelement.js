@@ -104,6 +104,18 @@ class GraphicElement {
                 this.vector.y = this.game.height - this.rect.y;
                 this.vector.vely = 0;
             }
+
+            if (this.sprite) {
+                if (this.vector.vely > 0) {
+                    this.sprite.changeState('jumping');
+                } else if (this.vector.vely < 0) {
+                    this.sprite.changeState('falling');
+                } else if (this.vector.velx != 0) {
+                    this.sprite.changeState('running');
+                } else {
+                    this.sprite.changeState('neutral');
+                }
+            }
         }
     }
 
@@ -129,47 +141,48 @@ class GraphicElement {
 
     jump() {
         if (this.isOnFloor()) {
-            if (this.sprite) {
-                // this.sprite.changeState('jumping');
-            }
             this.vector.vely = -this.options.jumpheight;
         }
     }
 
-    keyCommand(which, pressed) {
+    keyCommand(which, pressed, fromUp) {
         if (pressed) {
             switch (which) {
                 case Keyboard.KEY_RIGHT : 
-                    this.vector.setVelocity(this.options.initspeed, this.vector.vely);
+                    // this.vector.setVelocity(this.options.initspeed, this.vector.vely);
                     this.direction = "right";
                     this.keydown = true;
                     this.vector.setAcceleration(this.options.friction, this.vector.accely);
                     if (this.sprite) {
-                        this.sprite.changeState(this.movingstate, "right");
+                        this.sprite.changeState(this.sprite.state, "right");
                     }
                     break;
 
                 case Keyboard.KEY_LEFT : 
-                    this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
+                    // this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
                     this.direction = "left";
                     this.keydown = true;
                     this.vector.setAcceleration(-this.options.friction, this.vector.accely);
                     if (this.sprite) {
-                        this.sprite.changeState(this.movingstate, "left");
+                        this.sprite.changeState(this.sprite.state, "left");
                     }
                     break;
 
                 case Keyboard.KEY_SPACE:
                     this.jump();
                     break;
-                    
 
                 default:
             }
         } else if (this.keydown && (which == Keyboard.KEY_LEFT || which == Keyboard.KEY_RIGHT)) {
             this.keydown = false;
             let mod = this.direction == "left" ? 1 : -1;
-            this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
+
+            if ( (mod == -1 && this.vector.velx > 0) || (mod == 1 && this.vector.velx < 0) ) {
+                this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
+            } else {
+                this.vector.setAcceleration(this.options.friction * -mod, this.vector.accely, true);
+            }
 
             if (this.sprite) {
                 this.sprite.changeState();
@@ -180,13 +193,12 @@ class GraphicElement {
     control(keyboard, options = {}) {
         this.controlled = true;
         this.keyboard = keyboard;
-        this.movingstate = options.movingstate || "running";
         
         log('GElement', "Binding Graphic Element with keyboard controls");
         if (options.arrows) {
-            this.keventleft  = (which, pressed) => this.keyCommand(which, pressed); 
-            this.keventright = (which, pressed) => this.keyCommand(which, pressed); 
-            this.keventspace = (which, pressed) => this.keyCommand(which, pressed); 
+            this.keventleft  = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
+            this.keventright = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
+            this.keventspace = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
 
             keyboard.bindKey('left',  this.keventleft);
             keyboard.bindKey('right', this.keventright);

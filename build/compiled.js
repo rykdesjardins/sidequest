@@ -445,6 +445,18 @@ var GraphicElement = function () {
                     this.vector.y = this.game.height - this.rect.y;
                     this.vector.vely = 0;
                 }
+
+                if (this.sprite) {
+                    if (this.vector.vely > 0) {
+                        this.sprite.changeState('jumping');
+                    } else if (this.vector.vely < 0) {
+                        this.sprite.changeState('falling');
+                    } else if (this.vector.velx != 0) {
+                        this.sprite.changeState('running');
+                    } else {
+                        this.sprite.changeState('neutral');
+                    }
+                }
             }
         }
     }, {
@@ -473,34 +485,31 @@ var GraphicElement = function () {
         key: 'jump',
         value: function jump() {
             if (this.isOnFloor()) {
-                if (this.sprite) {
-                    this.sprite.changeState('jumping');
-                }
                 this.vector.vely = -this.options.jumpheight;
             }
         }
     }, {
         key: 'keyCommand',
-        value: function keyCommand(which, pressed) {
+        value: function keyCommand(which, pressed, fromUp) {
             if (pressed) {
                 switch (which) {
                     case Keyboard.KEY_RIGHT:
-                        this.vector.setVelocity(this.options.initspeed, this.vector.vely);
+                        // this.vector.setVelocity(this.options.initspeed, this.vector.vely);
                         this.direction = "right";
                         this.keydown = true;
                         this.vector.setAcceleration(this.options.friction, this.vector.accely);
                         if (this.sprite) {
-                            this.sprite.changeState(this.movingstate, "right");
+                            this.sprite.changeState(this.sprite.state, "right");
                         }
                         break;
 
                     case Keyboard.KEY_LEFT:
-                        this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
+                        // this.vector.setVelocity(-this.options.initspeed, this.vector.vely);
                         this.direction = "left";
                         this.keydown = true;
                         this.vector.setAcceleration(-this.options.friction, this.vector.accely);
                         if (this.sprite) {
-                            this.sprite.changeState(this.movingstate, "left");
+                            this.sprite.changeState(this.sprite.state, "left");
                         }
                         break;
 
@@ -513,7 +522,12 @@ var GraphicElement = function () {
             } else if (this.keydown && (which == Keyboard.KEY_LEFT || which == Keyboard.KEY_RIGHT)) {
                 this.keydown = false;
                 var mod = this.direction == "left" ? 1 : -1;
-                this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
+
+                if (mod == -1 && this.vector.velx > 0 || mod == 1 && this.vector.velx < 0) {
+                    this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
+                } else {
+                    this.vector.setAcceleration(this.options.friction * -mod, this.vector.accely, true);
+                }
 
                 if (this.sprite) {
                     this.sprite.changeState();
@@ -529,18 +543,17 @@ var GraphicElement = function () {
 
             this.controlled = true;
             this.keyboard = keyboard;
-            this.movingstate = options.movingstate || "running";
 
             log('GElement', "Binding Graphic Element with keyboard controls");
             if (options.arrows) {
-                this.keventleft = function (which, pressed) {
-                    return _this2.keyCommand(which, pressed);
+                this.keventleft = function (which, pressed, fromup) {
+                    return _this2.keyCommand(which, pressed, fromup);
                 };
-                this.keventright = function (which, pressed) {
-                    return _this2.keyCommand(which, pressed);
+                this.keventright = function (which, pressed, fromup) {
+                    return _this2.keyCommand(which, pressed, fromup);
                 };
-                this.keventspace = function (which, pressed) {
-                    return _this2.keyCommand(which, pressed);
+                this.keventspace = function (which, pressed, fromup) {
+                    return _this2.keyCommand(which, pressed, fromup);
                 };
 
                 keyboard.bindKey('left', this.keventleft);
@@ -804,11 +817,24 @@ var Keyboard = function () {
     }, {
         key: 'up',
         value: function up(ev) {
+            var _this2 = this;
+
             if (this.keyEvents[ev.which] && keystate[ev.which]) {
                 keystate[ev.which] = false;
                 this.keyEvents[ev.which].forEach(function (cb) {
                     return cb(ev.which, false);
                 });
+
+                var _loop = function _loop(_key) {
+                    var byte = keymap[_key];
+                    keystate[byte] && _this2.keyEvents[byte] && _this2.keyEvents[byte].forEach(function (cb) {
+                        return cb(byte, true, true);
+                    });
+                };
+
+                for (var _key in keymap) {
+                    _loop(_key);
+                }
             }
         }
     }, {
@@ -995,7 +1021,7 @@ var Vector2D = function () {
                 this.vely = this.maxvely * (this.vely < 0 ? -1 : 1);
             }
 
-            if (this.breakatzerox && (ogvelx > 0 && this.velx < 0 || ogvelx < 0 && this.velx > 0)) {
+            if (this.breakatzerox && (ogvelx > 0 && this.velx <= 0 || ogvelx < 0 && this.velx >= 0)) {
                 this.accelx = 0;
                 this.velx = 0;
             }
@@ -1051,8 +1077,13 @@ var Sprite = function () {
     }, {
         key: 'changeState',
         value: function changeState(statename, facing) {
+            var ogstate = this.state;
             this.state = statename || this.initialstate;
             this.facing = facing || this.facing;
+
+            if (ogstate != this.state) {
+                this.currentState.resetFrame();
+            }
         }
     }, {
         key: 'updateState',
@@ -1100,7 +1131,7 @@ var SpriteState = function SpriteState(bitmap, index) {
 };
 
 var SpriteSet = function () {
-    function SpriteSet(type, urlscheme, totalstates, framestateupdate) {
+    function SpriteSet(type, urlscheme, totalstates, framestateupdate, noloop) {
         _classCallCheck(this, SpriteSet);
 
         this.type = type;
@@ -1110,6 +1141,7 @@ var SpriteSet = function () {
         this.drew = 0;
         this.ready = false;
         this.totalstates = totalstates;
+        this.noloop = noloop;
         this.states = [];
 
         log('SpriteSet', 'Creating new Sprite Set from ' + urlscheme + ' with ' + totalstates + ' states');
@@ -1135,6 +1167,11 @@ var SpriteSet = function () {
             img.src = url;
         }
     }, {
+        key: 'resetFrame',
+        value: function resetFrame() {
+            this.frame = 0;
+        }
+    }, {
         key: 'previousFrame',
         value: function previousFrame() {
             this.frame--;
@@ -1147,7 +1184,7 @@ var SpriteSet = function () {
         value: function nextFrame() {
             this.frame++;
             if (this.frame == this.totalstates) {
-                this.frame = 0;
+                this.frame = this.noloop ? this.frame - 1 : 0;
             }
         }
     }, {
