@@ -2,6 +2,8 @@ const log = require('./log');
 const d = require('./dom');
 const Physics = require('./physics');
 const Keyboard = require('./keyboard');
+const Sprite = require('./sprite');
+const SpriteSet = require('./spriteset');
 
 const defaultoptions = {
     x : 0, y : 0, w : 0, h : 0,
@@ -10,33 +12,32 @@ const defaultoptions = {
     gravity : 0,
     jumpheight : 0,
     controlled : false,
-    friction : 0.2
+    useimagesize : false,
+    friction : 0.2,
+    override : {}
 };
 
 class GraphicElement {
     constructor(game, type, extra) {
         this.game = game;
-        this.ready = false;
         this.type = type;
         this.options = Object.assign(defaultoptions, extra || {});
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
+        this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
         this.controlled = this.options.controlled;
         this.options.gravity && this.applyGravity(this.options.gravity);
 
-        this.key;
-
         switch (this.type) {
             case "image":
-                this.initImage(this.options.url);
-                this.options.preload && this.preload();
+                this.initImage();
                 break;
 
             case "sprite":
-                this.initSprite(this.options.sprite);
+                this.initSprite();
                 break;
 
             // TODO : Handle vector shapes
@@ -51,39 +52,29 @@ class GraphicElement {
         log('GElement', "Created a new Graphic Element of type " + this.type);
     }
 
+    get ready() {
+        return this.sprite.currentState.ready;
+    }
+
     setPosition(x, y) {
         this.vector.at(x, y);
     }
 
-    initSprite(sprite) {
-        this.sprite = sprite;
-        this.key = sprite;
-        this.draw = this.drawSprite;
+    initSprite() {
+        this.sprite = this.options.sprite;
     }
 
-    initImage(url) {
-        this.url = url;
-        this.image = new Image();
-        this.key = this.image;
-        this.draw = this.drawImage;
+    initImage() {
+        this.url = this.options.url;
+
+        this.sprite = new Sprite({
+            spritesets : {
+                neutral : new SpriteSet('file', this.url)
+            },
+            useimagesize : this.options.useimagesize
+        });
+
         log('GElement', "Initialized Graphic Element with image at " + this.url);
-    }
-
-    preload() {
-        this.image.onload = () => {
-            createImageBitmap(this.image).then((imgbitmap) => {
-                this.imagebitmap = imgbitmap;
-                if (!this.rect.w && !this.rect.h) {
-                    this.rect.at(this.imagebitmap.width, this.imagebitmap.height);
-                }
-
-                log('GElement', "Preloaded Graphic Element with image at " + this.url);
-                this.ready = true;
-                this.options.preloadcallback && this.options.preloadcallback(this);
-            });
-        }
-
-        this.image.src = this.url;
     }
 
     applyGravity(gravity) {
@@ -119,29 +110,38 @@ class GraphicElement {
         }
     }
 
-    drawImage(context) {
-        this.vector.update();
-        this.update();
-        this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
-    }
-
-    drawSprite(context) {
-        this.vector.update();
-        this.update();
-        this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
-    }
-
-    drawShape(context) {
-
-    }
-
     draw(context) {
-        throw new Error("Tried to draw a GElement with an invalid type : " + this.type);
+        this.vector.update();
+        this.update();
+        const pos = this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
+
+        if (pos) {
+            if (this.game.options.env == "dev") {
+                context.beginPath();
+                context.rect(
+                    this.collision.x + pos.x, 
+                    this.collision.y + pos.y, 
+                    this.collision.w || pos.w, 
+                    this.collision.h || pos.h
+                );
+                context.lineWidth = 1;
+                context.strokeStyle = 'red';
+                context.stroke();
+            }
+        }
+    }
+
+    override(action, callback) {
+        this.override[action] = callback;
     }
 
     jump() {
         if (this.isOnFloor()) {
-            this.vector.vely = -this.options.jumpheight;
+            if (this.override.jump) {
+                this.override.jump();
+            } else {
+                this.vector.vely = -this.options.jumpheight;
+            }
         }
     }
 

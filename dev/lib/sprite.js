@@ -34,13 +34,25 @@ class Sprite {
 
     draw(context, x, y, w, h) {
         context.save();
+        let pos;
         if (this.facing == "right") {
-            this.currentState.draw(context, x, y, w, h);
+            if (this.useimagesize) {
+                pos = this.currentState.draw(context, x, y);
+            } else {
+                pos = this.currentState.draw(context, x, y, w, h);
+            }
         } else if (this.facing == "left") {
             context.scale(-1, 1);
-            this.currentState.draw(context, -x - w, y, w, h);
+            if (this.useimagesize) {
+                pos = this.currentState.draw(context, -x-w, y);
+            } else {
+                pos = this.currentState.draw(context, -x-w, y, w, h);
+            }
+            pos.x = x;
         }
         context.restore();
+        
+        return pos;
     }
 }
 

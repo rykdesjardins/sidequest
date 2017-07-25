@@ -332,6 +332,8 @@ var log = require('./log');
 var d = require('./dom');
 var Physics = require('./physics');
 var Keyboard = require('./keyboard');
+var Sprite = require('./sprite');
+var SpriteSet = require('./spriteset');
 
 var defaultoptions = {
     x: 0, y: 0, w: 0, h: 0,
@@ -340,7 +342,9 @@ var defaultoptions = {
     gravity: 0,
     jumpheight: 0,
     controlled: false,
-    friction: 0.2
+    useimagesize: false,
+    friction: 0.2,
+    override: {}
 };
 
 var GraphicElement = function () {
@@ -348,27 +352,24 @@ var GraphicElement = function () {
         _classCallCheck(this, GraphicElement);
 
         this.game = game;
-        this.ready = false;
         this.type = type;
         this.options = Object.assign(defaultoptions, extra || {});
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
+        this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
         this.controlled = this.options.controlled;
         this.options.gravity && this.applyGravity(this.options.gravity);
 
-        this.key;
-
         switch (this.type) {
             case "image":
-                this.initImage(this.options.url);
-                this.options.preload && this.preload();
+                this.initImage();
                 break;
 
             case "sprite":
-                this.initSprite(this.options.sprite);
+                this.initSprite();
                 break;
 
             // TODO : Handle vector shapes
@@ -390,39 +391,22 @@ var GraphicElement = function () {
         }
     }, {
         key: 'initSprite',
-        value: function initSprite(sprite) {
-            this.sprite = sprite;
-            this.key = sprite;
-            this.draw = this.drawSprite;
+        value: function initSprite() {
+            this.sprite = this.options.sprite;
         }
     }, {
         key: 'initImage',
-        value: function initImage(url) {
-            this.url = url;
-            this.image = new Image();
-            this.key = this.image;
-            this.draw = this.drawImage;
+        value: function initImage() {
+            this.url = this.options.url;
+
+            this.sprite = new Sprite({
+                spritesets: {
+                    neutral: new SpriteSet('file', this.url)
+                },
+                useimagesize: this.options.useimagesize
+            });
+
             log('GElement', "Initialized Graphic Element with image at " + this.url);
-        }
-    }, {
-        key: 'preload',
-        value: function preload() {
-            var _this = this;
-
-            this.image.onload = function () {
-                createImageBitmap(_this.image).then(function (imgbitmap) {
-                    _this.imagebitmap = imgbitmap;
-                    if (!_this.rect.w && !_this.rect.h) {
-                        _this.rect.at(_this.imagebitmap.width, _this.imagebitmap.height);
-                    }
-
-                    log('GElement', "Preloaded Graphic Element with image at " + _this.url);
-                    _this.ready = true;
-                    _this.options.preloadcallback && _this.options.preloadcallback(_this);
-                });
-            };
-
-            this.image.src = this.url;
         }
     }, {
         key: 'applyGravity',
@@ -460,32 +444,36 @@ var GraphicElement = function () {
             }
         }
     }, {
-        key: 'drawImage',
-        value: function drawImage(context) {
-            this.vector.update();
-            this.update();
-            this.imagebitmap && context.drawImage(this.imagebitmap, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
-        }
-    }, {
-        key: 'drawSprite',
-        value: function drawSprite(context) {
-            this.vector.update();
-            this.update();
-            this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
-        }
-    }, {
-        key: 'drawShape',
-        value: function drawShape(context) {}
-    }, {
         key: 'draw',
         value: function draw(context) {
-            throw new Error("Tried to draw a GElement with an invalid type : " + this.type);
+            this.vector.update();
+            this.update();
+            var pos = this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
+
+            if (pos) {
+                if (this.game.options.env == "dev") {
+                    context.beginPath();
+                    context.rect(this.collision.x + pos.x, this.collision.y + pos.y, this.collision.w || pos.w, this.collision.h || pos.h);
+                    context.lineWidth = 1;
+                    context.strokeStyle = 'red';
+                    context.stroke();
+                }
+            }
+        }
+    }, {
+        key: 'override',
+        value: function override(action, callback) {
+            this.override[action] = callback;
         }
     }, {
         key: 'jump',
         value: function jump() {
             if (this.isOnFloor()) {
-                this.vector.vely = -this.options.jumpheight;
+                if (this.override.jump) {
+                    this.override.jump();
+                } else {
+                    this.vector.vely = -this.options.jumpheight;
+                }
             }
         }
     }, {
@@ -537,7 +525,7 @@ var GraphicElement = function () {
     }, {
         key: 'control',
         value: function control(keyboard) {
-            var _this2 = this;
+            var _this = this;
 
             var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
@@ -547,13 +535,13 @@ var GraphicElement = function () {
             log('GElement', "Binding Graphic Element with keyboard controls");
             if (options.arrows) {
                 this.keventleft = function (which, pressed, fromup) {
-                    return _this2.keyCommand(which, pressed, fromup);
+                    return _this.keyCommand(which, pressed, fromup);
                 };
                 this.keventright = function (which, pressed, fromup) {
-                    return _this2.keyCommand(which, pressed, fromup);
+                    return _this.keyCommand(which, pressed, fromup);
                 };
                 this.keventspace = function (which, pressed, fromup) {
-                    return _this2.keyCommand(which, pressed, fromup);
+                    return _this.keyCommand(which, pressed, fromup);
                 };
 
                 keyboard.bindKey('left', this.keventleft);
@@ -578,6 +566,11 @@ var GraphicElement = function () {
                 this.giveupControll();
             }
         }
+    }, {
+        key: 'ready',
+        get: function get() {
+            return this.sprite.currentState.ready;
+        }
     }]);
 
     return GraphicElement;
@@ -585,7 +578,7 @@ var GraphicElement = function () {
 
 module.exports = GraphicElement;
 
-},{"./dom":3,"./keyboard":7,"./log":8,"./physics":10}],5:[function(require,module,exports){
+},{"./dom":3,"./keyboard":7,"./log":8,"./physics":10,"./sprite":11,"./spriteset":12}],5:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -946,7 +939,7 @@ var GameMouse = function () {
 module.exports = GameMouse;
 
 },{"./log":8,"./physics":10}],10:[function(require,module,exports){
-"use strict";
+'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -973,31 +966,31 @@ var Vector2D = function () {
     }
 
     _createClass(Vector2D, [{
-        key: "at",
+        key: 'at',
         value: function at(x, y) {
             this.x = x;
             this.y = y;
         }
     }, {
-        key: "to",
+        key: 'to',
         value: function to(destx, desty) {
             this.destx = destx;
             this.desty = desty;
         }
     }, {
-        key: "setMaxVelocity",
+        key: 'setMaxVelocity',
         value: function setMaxVelocity(x, y) {
             this.maxvelx = x;
             this.maxvely = y;
         }
     }, {
-        key: "setVelocity",
+        key: 'setVelocity',
         value: function setVelocity(x, y) {
             this.velx = x;
             this.vely = y;
         }
     }, {
-        key: "setAcceleration",
+        key: 'setAcceleration',
         value: function setAcceleration(x, y, breakatzerox, breakatzeroy) {
             this.accelx = x;
             this.accely = y;
@@ -1006,7 +999,7 @@ var Vector2D = function () {
             this.breakatzeroy = breakatzeroy;
         }
     }, {
-        key: "update",
+        key: 'update',
         value: function update() {
             var ogvelx = this.velx;
             var ogvely = this.vely;
@@ -1035,7 +1028,7 @@ var Vector2D = function () {
             this.y += this.vely;
         }
     }, {
-        key: "length",
+        key: 'length',
         value: function length() {
             return Math.sqrt(Math.pow(this.x - this.destx, 2) + Math.pow(this.y - this.desty, 2));
         }
@@ -1044,7 +1037,35 @@ var Vector2D = function () {
     return Vector2D;
 }();
 
-module.exports = { Vector2D: Vector2D };
+var Rect = function () {
+    function Rect(x, y, w, h) {
+        _classCallCheck(this, Rect);
+
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+    }
+
+    _createClass(Rect, [{
+        key: 'draw',
+        value: function draw(context) {
+            var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+            if (!this.w || !this.h) return;
+
+            context.beginPath();
+            context.rect(this.x, this.y, this.w, this.h);
+            context.lineWidth = options.lineWidth || 3;
+            context.strokeStyle = options.strokeStyle || 'black';
+            context.stroke();
+        }
+    }]);
+
+    return Rect;
+}();
+
+module.exports = { Vector2D: Vector2D, Rect: Rect };
 
 },{}],11:[function(require,module,exports){
 'use strict';
@@ -1094,13 +1115,25 @@ var Sprite = function () {
         key: 'draw',
         value: function draw(context, x, y, w, h) {
             context.save();
+            var pos = void 0;
             if (this.facing == "right") {
-                this.currentState.draw(context, x, y, w, h);
+                if (this.useimagesize) {
+                    pos = this.currentState.draw(context, x, y);
+                } else {
+                    pos = this.currentState.draw(context, x, y, w, h);
+                }
             } else if (this.facing == "left") {
                 context.scale(-1, 1);
-                this.currentState.draw(context, -x - w, y, w, h);
+                if (this.useimagesize) {
+                    pos = this.currentState.draw(context, -x - w, y);
+                } else {
+                    pos = this.currentState.draw(context, -x - w, y, w, h);
+                }
+                pos.x = x;
             }
             context.restore();
+
+            return pos;
         }
     }, {
         key: 'currentState',
@@ -1122,6 +1155,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var log = require('./log');
+var Physics = require('./physics');
 
 var SpriteState = function SpriteState(bitmap, index) {
     _classCallCheck(this, SpriteState);
@@ -1137,16 +1171,18 @@ var SpriteSet = function () {
         this.type = type;
         this.url = urlscheme;
         this.frame = 0;
-        this.framestateupdate = framestateupdate || 10;
+        this.framestateupdate = framestateupdate || false;
         this.drew = 0;
         this.ready = false;
-        this.totalstates = totalstates;
+        this.totalstates = totalstates || 1;
         this.noloop = noloop;
         this.states = [];
 
-        log('SpriteSet', 'Creating new Sprite Set from ' + urlscheme + ' with ' + totalstates + ' states');
+        log('SpriteSet', 'Creating new Sprite Set from ' + this.url + ' with ' + this.totalstates + ' states');
         if (type === "singleimage") {
             // TODO : Handle multiple states in single image
+        } else if (type === "file") {
+            this.load();
         } else if (type === "fileset") {
             this.load();
         } else {
@@ -1194,7 +1230,7 @@ var SpriteSet = function () {
 
             if (this.type == "singleimage") {
                 // TODO : Handle loading states from one image
-            } else if (this.type == "fileset") {
+            } else {
                 log('SpriteSet', 'Loading states from url scheme ' + this.url);
                 var imageIndex = -1;
                 var loadNextImage = function loadNextImage() {
@@ -1217,12 +1253,22 @@ var SpriteSet = function () {
     }, {
         key: 'draw',
         value: function draw(context, x, y, w, h) {
-            this.ready && context.drawImage(this.currentFrame, x, y, w, h);
+            if (!this.ready) {
+                return;
+            }
+
+            x = x || 0;
+            y = y || 0;
+            w = w || this.currentFrame.width;
+            h = h || this.currentFrame.height;
+            context.drawImage(this.currentFrame, x, y, w, h);
             this.drew++;
-            if (this.drew == this.framestateupdate) {
+            if (this.framestateupdate && this.drew == this.framestateupdate) {
                 this.drew = 0;
                 this.nextFrame();
             }
+
+            return new Physics.Rect(x, y, w, h);
         }
     }, {
         key: 'destroy',
@@ -1239,4 +1285,4 @@ var SpriteSet = function () {
 
 module.exports = SpriteSet;
 
-},{"./log":8}]},{},[1]);
+},{"./log":8,"./physics":10}]},{},[1]);

@@ -1,4 +1,5 @@
 const log = require('./log');
+const Physics = require('./physics');
 
 class SpriteState {
     constructor(bitmap, index) {
@@ -12,16 +13,18 @@ class SpriteSet {
         this.type = type;
         this.url = urlscheme;
         this.frame = 0;
-        this.framestateupdate = framestateupdate || 10;
+        this.framestateupdate = framestateupdate || false;
         this.drew = 0;
         this.ready = false;
-        this.totalstates = totalstates;
+        this.totalstates = totalstates || 1;
         this.noloop = noloop;
         this.states = [];
 
-        log('SpriteSet', 'Creating new Sprite Set from ' + urlscheme + ' with ' + totalstates + ' states');
+        log('SpriteSet', 'Creating new Sprite Set from ' + this.url + ' with ' + this.totalstates + ' states');
         if (type === "singleimage") {
             // TODO : Handle multiple states in single image
+        } else if (type === "file") {
+            this.load();
         } else if (type === "fileset") {
             this.load();
         } else {
@@ -65,7 +68,7 @@ class SpriteSet {
     load(done) {
         if (this.type == "singleimage") {
             // TODO : Handle loading states from one image
-        } else if (this.type == "fileset") {
+        } else {
             log('SpriteSet', 'Loading states from url scheme ' + this.url);
             let imageIndex = -1;
             const loadNextImage = () => {
@@ -87,12 +90,22 @@ class SpriteSet {
     }
 
     draw(context, x, y, w, h) {
-        this.ready && context.drawImage(this.currentFrame, x, y, w, h);
+        if (!this.ready) {
+            return;
+        }
+
+        x = x || 0;
+        y = y || 0;
+        w = w || this.currentFrame.width;
+        h = h || this.currentFrame.height;
+        context.drawImage(this.currentFrame, x, y, w, h);
         this.drew++;
-        if (this.drew == this.framestateupdate) {
+        if (this.framestateupdate && this.drew == this.framestateupdate) {
             this.drew = 0;
             this.nextFrame();
         }
+
+        return new Physics.Rect(x, y, w, h);
     }
 
     destroy() {
