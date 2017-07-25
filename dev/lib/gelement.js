@@ -110,10 +110,10 @@ class GraphicElement {
         }
     }
 
-    draw(context) {
+    draw(context, camera) {
         this.vector.update();
         this.update();
-        const pos = this.sprite.draw(context, this.vector.x, this.vector.y, this.rect.x, this.rect.y);
+        const pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
 
         if (pos) {
             if (this.game.options.env == "dev") {

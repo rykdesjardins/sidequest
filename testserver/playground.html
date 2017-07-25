@@ -33,6 +33,7 @@
             });
 
             game.graphics.addElement(4, 'player', player);
+            game.graphics.camera.follow(player);
             player.control(game.keyboard, {arrows : true, movingstate : "running"});
         </script>
     </body>

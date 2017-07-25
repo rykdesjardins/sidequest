@@ -1,4 +1,5 @@
 const log = require('./log');
+const Camera = require('./camera');
 
 class GraphicLayer {
     constructor(index) {
@@ -20,8 +21,8 @@ class GraphicLayer {
         this._assocGE = {};
     }
 
-    draw(context) {
-        this.graphicselements.forEach(x => x.draw(context));
+    draw(context, camera) {
+        this.graphicselements.forEach(x => x.draw(context, camera));
     }
 }
 
@@ -29,6 +30,7 @@ class Graphics {
     constructor(context, options) {
         this.context = this.c = context;
         this.options = options;
+        this.camera = new Camera(context.width, context.height);
 
         this.layers = [];
         this.fixedLayer = new GraphicLayer(-1);
@@ -42,6 +44,7 @@ class Graphics {
         this.w = w;
         this.h = h;
         this.rect = [0, 0, this.w, this.h];
+        this.camera.resize(this.w, this.h);
     }
 
     clear() {
@@ -54,7 +57,8 @@ class Graphics {
     }
 
     draw() {
-        this.layers.forEach(x => x.draw(this.context));
+        this.camera.update();
+        this.layers.forEach(x => x.draw(this.context, this.camera));
     }
 }
 

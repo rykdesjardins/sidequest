@@ -16,6 +16,10 @@ class Vector2D {
         this.maxvely;
     }
 
+    add(vector) {
+        return new Vector2D(this.x + vector.x, this.y + vector.y);
+    }
+
     at(x, y) {
         this.x = x;
         this.y = y;
