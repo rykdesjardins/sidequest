@@ -526,7 +526,7 @@ var GraphicElement = function () {
     }, {
         key: 'collide',
         value: function collide(gelement) {
-            if (this.strength > gelement.strength) {
+            if (this.strength >= gelement.strength) {
                 log('Collision', this.id + ' will affect ' + gelement.id);
             }
         }
