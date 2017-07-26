@@ -192,7 +192,7 @@ var Camera = function () {
             if (realx > half + this.following.rect.x) {
                 this.rect.x += realx - this.following.rect.x - half;
             } else if (realx + this.following.rect.x < half) {
-                // this.rect.x -= half - realx + this.following.rect.x;
+                this.rect.x -= half - (realx + this.following.rect.x);
             }
 
             if (this.rect.x < 0) {
