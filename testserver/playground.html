@@ -17,7 +17,7 @@
                 w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64)
             });
             brick.setPosition(400, game.graphics.h - 64),
-            game.graphics.addElement(4, 'brick', brick);
+            game.graphics.addElement(2, 'brick', brick);
 
             var player = new SideQuest.GraphicElement(game, "sprite", {
                 x : 20, y : 20,
@@ -38,7 +38,7 @@
                 })
             });
 
-            game.graphics.addElement(4, 'player', player);
+            game.graphics.addElement(2, 'player', player);
             game.graphics.camera.follow(player);
             player.control(game.keyboard, {arrows : true});
         </script>
