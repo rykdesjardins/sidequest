@@ -14,7 +14,8 @@
             game.graphics.addElement(0, 'cloud', cloud);
 
             var brick = new SideQuest.GraphicElement(game, "image", {url : "/brick.jpg",
-                w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64)
+                w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64),
+                strength : 2000
             });
             brick.setPosition(400, game.graphics.h - 64),
             game.graphics.addElement(2, 'brick', brick);
@@ -22,6 +23,8 @@
             var player = new SideQuest.GraphicElement(game, "sprite", {
                 x : 20, y : 20,
                 w : 120, h : 100,
+
+                strength: 1200,
 
                 collision : new SideQuest.Physics.Rect(30, 5, 50, 95),
 

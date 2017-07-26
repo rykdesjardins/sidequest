@@ -10,6 +10,7 @@ const defaultoptions = {
     initspeed : 1,
     maxspeed : 3,
     gravity : 0,
+    strength : 500,
     jumpheight : 0,
     controlled : false,
     useimagesize : false,
@@ -29,6 +30,7 @@ class GraphicElement {
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
+        this.strength = this.options.strength;
         this.effects = Object.assign(defaulteffects, {});
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
@@ -120,6 +122,21 @@ class GraphicElement {
             this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
     }
 
+    collide(gelement) {
+        if (this.strength => gelement.strength) {
+            log('Collision', this.id + ' will affect ' + gelement.id);
+        }
+    }
+
+    collisionBox(camera) {
+        return new Physics.Rect(
+            this.vector.x - camera.rect.x + this.collision.x, 
+            this.vector.y - camera.rect.y + this.collision.y,
+            this.collision.w,
+            this.collision.h
+        );
+    }
+
     debug(context, camera, drawn) {
         const pos = {x : this.vector.x - camera.rect.x, y : this.vector.y - camera.rect.y, w : this.rect.x, h : this.rect.y};
 
@@ -154,7 +171,7 @@ class GraphicElement {
         context.fillText("State : " + this.sprite.state, pos.x + pos.w + 5, pos.y + 38);
         context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 52);
         context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 66);
-        context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
+        context.fillText("Drawn : " + (drawn ? "Yes" : "No") + ", strength : " + this.strength, pos.x + pos.w + 5, pos.y + 80);
     }
 
     draw(context, camera) {

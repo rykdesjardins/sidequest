@@ -90,4 +90,21 @@ class Rect {
     }
 }
 
-module.exports = { Vector2D, Rect };
+class Collider {
+    static rectangles(a, b) {
+        return !(
+            ((a.y + a.h) < (b.y)) || (a.y > (b.y + b.h)) ||
+            ((a.x + a.w) < b.x) || (a.x > (b.x + b.w))
+        );
+    }
+
+    static vectors(a, b) {
+
+    }
+
+    static vect2rect(rect, vector) {
+
+    }
+}
+
+module.exports = { Vector2D, Rect, Collider };

@@ -408,6 +408,7 @@ var defaultoptions = {
     initspeed: 1,
     maxspeed: 3,
     gravity: 0,
+    strength: 500,
     jumpheight: 0,
     controlled: false,
     useimagesize: false,
@@ -429,6 +430,7 @@ var GraphicElement = function () {
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
+        this.strength = this.options.strength;
         this.effects = Object.assign(defaulteffects, {});
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
@@ -522,6 +524,18 @@ var GraphicElement = function () {
             return this.vector.x - camera.rect.x + this.rect.x > 0 && this.vector.x - camera.rect.x < camera.rect.w && this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
         }
     }, {
+        key: 'collide',
+        value: function collide(gelement) {
+            if (this.strength > gelement.strength) {
+                log('Collision', this.id + ' will affect ' + gelement.id);
+            }
+        }
+    }, {
+        key: 'collisionBox',
+        value: function collisionBox(camera) {
+            return new Physics.Rect(this.vector.x - camera.rect.x + this.collision.x, this.vector.y - camera.rect.y + this.collision.y, this.collision.w, this.collision.h);
+        }
+    }, {
         key: 'debug',
         value: function debug(context, camera, drawn) {
             var pos = { x: this.vector.x - camera.rect.x, y: this.vector.y - camera.rect.y, w: this.rect.x, h: this.rect.y };
@@ -547,7 +561,7 @@ var GraphicElement = function () {
             context.fillText("State : " + this.sprite.state, pos.x + pos.w + 5, pos.y + 38);
             context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 52);
             context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 66);
-            context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
+            context.fillText("Drawn : " + (drawn ? "Yes" : "No") + ", strength : " + this.strength, pos.x + pos.w + 5, pos.y + 80);
         }
     }, {
         key: 'draw',
@@ -714,6 +728,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var log = require('./log');
 var Camera = require('./camera');
+var Physics = require('./physics');
 
 var GraphicLayer = function () {
     function GraphicLayer(index) {
@@ -747,10 +762,13 @@ var GraphicLayer = function () {
         }
     }, {
         key: 'impactCheck',
-        value: function impactCheck() {
+        value: function impactCheck(camera) {
             for (var i = 0; i < this.graphicselements.length; i++) {
-                for (var j = i; j < this.graphicselements.length; j++) {
-                    // Check for collision
+                for (var j = i + 1; j < this.graphicselements.length; j++) {
+                    if (Physics.Collider.rectangles(this.graphicselements[i].collisionBox(camera), this.graphicselements[j].collisionBox(camera))) {
+                        this.graphicselements[i].collide(this.graphicselements[j]);
+                        this.graphicselements[j].collide(this.graphicselements[i]);
+                    }
                 }
             }
             return this;
@@ -803,6 +821,7 @@ var Graphics = function () {
     }, {
         key: 'addElement',
         value: function addElement(layerid, elementid, element) {
+            element.id = elementid;
             this.layers[layerid].addElement(elementid, element);
         }
     }, {
@@ -812,7 +831,7 @@ var Graphics = function () {
 
             this.camera.update();
             this.layers.forEach(function (x) {
-                return x.impactCheck().draw(_this.context, _this.camera);
+                return x.impactCheck(_this.camera).draw(_this.context, _this.camera);
             });
         }
     }]);
@@ -822,7 +841,7 @@ var Graphics = function () {
 
 module.exports = Graphics;
 
-},{"./camera":2,"./log":9}],8:[function(require,module,exports){
+},{"./camera":2,"./log":9,"./physics":11}],8:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1181,7 +1200,28 @@ var Rect = function Rect(x, y, w, h) {
     this.h = h;
 };
 
-module.exports = { Vector2D: Vector2D, Rect: Rect };
+var Collider = function () {
+    function Collider() {
+        _classCallCheck(this, Collider);
+    }
+
+    _createClass(Collider, null, [{
+        key: "rectangles",
+        value: function rectangles(a, b) {
+            return !(a.y + a.h < b.y || a.y > b.y + b.h || a.x + a.w < b.x || a.x > b.x + b.w);
+        }
+    }, {
+        key: "vectors",
+        value: function vectors(a, b) {}
+    }, {
+        key: "vect2rect",
+        value: function vect2rect(rect, vector) {}
+    }]);
+
+    return Collider;
+}();
+
+module.exports = { Vector2D: Vector2D, Rect: Rect, Collider: Collider };
 
 },{}],12:[function(require,module,exports){
 'use strict';

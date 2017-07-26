@@ -1,5 +1,6 @@
 const log = require('./log');
 const Camera = require('./camera');
+const Physics = require('./physics');
 
 class GraphicLayer {
     constructor(index) {
@@ -25,10 +26,17 @@ class GraphicLayer {
         return this;
     }
 
-    impactCheck() {
+    impactCheck(camera) {
         for (let i = 0; i < this.graphicselements.length; i++) {
-            for (let j = i; j < this.graphicselements.length; j++) {
-                // Check for collision
+            for (let j = i+1; j < this.graphicselements.length; j++) {
+                if (Physics.Collider.rectangles(
+                        this.graphicselements[i].collisionBox(camera),
+                        this.graphicselements[j].collisionBox(camera)
+                    )
+                ) {
+                    this.graphicselements[i].collide(this.graphicselements[j]);
+                    this.graphicselements[j].collide(this.graphicselements[i]);
+                }
             }
         }
         return this;
@@ -67,12 +75,13 @@ class Graphics {
     }
 
     addElement(layerid, elementid, element) {
+        element.id = elementid;
         this.layers[layerid].addElement(elementid, element);
     }
 
     draw() {
         this.camera.update();
-        this.layers.forEach(x => x.impactCheck().draw(this.context, this.camera));
+        this.layers.forEach(x => x.impactCheck(this.camera).draw(this.context, this.camera));
     }
 }
 
