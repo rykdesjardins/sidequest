@@ -731,6 +731,8 @@ var GraphicLayer = function () {
             log('GraphicLayer', "Added an element to layer " + this.index + " with id " + id);
             this.graphicselements.push(gelement);
             this._assocGE[id] = gelement;
+
+            return this;
         }
     }, {
         key: 'clear',
@@ -740,6 +742,18 @@ var GraphicLayer = function () {
             });
             this.graphicselements = [];
             this._assocGE = {};
+
+            return this;
+        }
+    }, {
+        key: 'impactCheck',
+        value: function impactCheck() {
+            for (var i = 0; i < this.graphicselements.length; i++) {
+                for (var j = i; j < this.graphicselements.length; j++) {
+                    // Check for collision
+                }
+            }
+            return this;
         }
     }, {
         key: 'draw',
@@ -747,6 +761,7 @@ var GraphicLayer = function () {
             this.graphicselements.forEach(function (x) {
                 return x.draw(context, camera);
             });
+            return this;
         }
     }]);
 
@@ -797,7 +812,7 @@ var Graphics = function () {
 
             this.camera.update();
             this.layers.forEach(function (x) {
-                return x.draw(_this.context, _this.camera);
+                return x.impactCheck().draw(_this.context, _this.camera);
             });
         }
     }]);

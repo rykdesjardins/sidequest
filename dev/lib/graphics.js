@@ -13,16 +13,30 @@ class GraphicLayer {
         log('GraphicLayer', "Added an element to layer " + this.index + " with id " + id);
         this.graphicselements.push(gelement);
         this._assocGE[id] = gelement;
+
+        return this;
     }
 
     clear() {
         this.graphicselements.forEach(x => x.destroy());
         this.graphicselements = [];
         this._assocGE = {};
+
+        return this;
+    }
+
+    impactCheck() {
+        for (let i = 0; i < this.graphicselements.length; i++) {
+            for (let j = i; j < this.graphicselements.length; j++) {
+                // Check for collision
+            }
+        }
+        return this;
     }
 
     draw(context, camera) {
         this.graphicselements.forEach(x => x.draw(context, camera));
+        return this;
     }
 }
 
@@ -58,7 +72,7 @@ class Graphics {
 
     draw() {
         this.camera.update();
-        this.layers.forEach(x => x.draw(this.context, this.camera));
+        this.layers.forEach(x => x.impactCheck().draw(this.context, this.camera));
     }
 }
 
