@@ -19,6 +19,10 @@ class Sprite {
         this.state = statename || this.initialstate;
         this.facing = facing || this.facing;
 
+        if (!this.currentState) {
+            this.spritesets[this.state] = this.spritesets["neutral"];
+        }
+
         if (ogstate != this.state) {
             this.currentState.resetFrame();
         }

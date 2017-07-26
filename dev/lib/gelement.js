@@ -17,6 +17,10 @@ const defaultoptions = {
     override : {}
 };
 
+const defaulteffects = {
+    opacity : 1.0
+}
+
 class GraphicElement {
     constructor(game, type, extra) {
         this.game = game;
@@ -25,6 +29,7 @@ class GraphicElement {
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
+        this.effects = Object.assign(defaulteffects, {});
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
@@ -97,9 +102,9 @@ class GraphicElement {
             }
 
             if (this.sprite) {
-                if (this.vector.vely > 0) {
+                if (this.vector.vely < 0) {
                     this.sprite.changeState('jumping');
-                } else if (this.vector.vely < 0) {
+                } else if (this.vector.vely > 0) {
                     this.sprite.changeState('falling');
                 } else if (this.vector.velx != 0) {
                     this.sprite.changeState('running');
@@ -110,25 +115,67 @@ class GraphicElement {
         }
     }
 
+    shouldBeDrawn(camera) {
+        return this.vector.x - camera.rect.x + this.rect.x > 0 && this.vector.x - camera.rect.x < camera.rect.w &&
+            this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
+    }
+
+    debug(context, camera, drawn) {
+        const pos = {x : this.vector.x - camera.rect.x, y : this.vector.y - camera.rect.y, w : this.rect.x, h : this.rect.y};
+
+        if (drawn) {
+            context.beginPath();
+            context.rect(
+                this.collision.x + pos.x, 
+                this.collision.y + pos.y, 
+                this.collision.w || pos.w, 
+                this.collision.h || pos.h
+            );
+            context.lineWidth = 1;
+            context.strokeStyle = 'red';
+            context.stroke();
+
+            context.beginPath();
+            context.rect(
+                pos.x, 
+                pos.y, 
+                pos.w, 
+                pos.h
+            );
+            context.lineWidth = 1;
+            context.strokeStyle = 'blue';
+            context.stroke();
+        }
+
+        context.font = "12px Arial, sans-serif";
+        context.fillStyle = "black";
+        context.fillText("Relative " + this.vector.x + " x " + this.vector.y, pos.x + pos.w + 5, pos.y + 10);
+        context.fillText("Real " + (this.vector.x - camera.rect.x) + " x " + (this.vector.y - camera.rect.y), pos.x + pos.w + 5, pos.y + 24);
+        context.fillText("State : " + this.sprite.state, pos.x + pos.w + 5, pos.y + 38);
+        context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 52);
+        context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 66);
+        context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
+    }
+
     draw(context, camera) {
         this.vector.update();
         this.update();
-        const pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
 
-        if (pos) {
-            if (this.game.options.env == "dev") {
-                context.beginPath();
-                context.rect(
-                    this.collision.x + pos.x, 
-                    this.collision.y + pos.y, 
-                    this.collision.w || pos.w, 
-                    this.collision.h || pos.h
-                );
-                context.lineWidth = 1;
-                context.strokeStyle = 'red';
-                context.stroke();
+        let drawn = false;
+        if (this.shouldBeDrawn(camera)) {
+            const pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
+            drawn = !!pos;
+            if (this.options.useimagesize && pos) {
+                this.rect.x = pos.w;
+                this.rect.y = pos.h;
             }
         }
+
+        if (this.game.options.env == "dev") {
+            this.debug(context, camera, drawn);
+        }
+
+        return drawn;
     }
 
     override(action, callback) {
@@ -153,9 +200,7 @@ class GraphicElement {
                     this.direction = "right";
                     this.keydown = true;
                     this.vector.setAcceleration(this.options.friction, this.vector.accely);
-                    if (this.sprite) {
-                        this.sprite.changeState(this.sprite.state, "right");
-                    }
+                    this.sprite.changeState(this.sprite.state, "right");
                     break;
 
                 case Keyboard.KEY_LEFT : 
@@ -163,12 +208,11 @@ class GraphicElement {
                     this.direction = "left";
                     this.keydown = true;
                     this.vector.setAcceleration(-this.options.friction, this.vector.accely);
-                    if (this.sprite) {
-                        this.sprite.changeState(this.sprite.state, "left");
-                    }
+                    this.sprite.changeState(this.sprite.state, "left");
                     break;
 
                 case Keyboard.KEY_SPACE:
+                case Keyboard.KEY_UP:
                     this.jump();
                     break;
 
@@ -184,9 +228,7 @@ class GraphicElement {
                 this.vector.setAcceleration(this.options.friction * -mod, this.vector.accely, true);
             }
 
-            if (this.sprite) {
-                this.sprite.changeState();
-            }
+            this.sprite.changeState();
         }
     }
 
@@ -198,17 +240,20 @@ class GraphicElement {
         if (options.arrows) {
             this.keventleft  = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
             this.keventright = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
+            this.keventup    = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
             this.keventspace = (which, pressed, fromup) => this.keyCommand(which, pressed, fromup); 
 
-            keyboard.bindKey('left',  this.keventleft);
+            keyboard.bindKey('left',  this.keventleft );
             keyboard.bindKey('right', this.keventright);
+            keyboard.bindKey('up',    this.keventup   );
             keyboard.bindKey('space', this.keventspace);
         }
     }
 
     giveupControll() {
-        keyboard.killKey('left', this.keventleft);
+        keyboard.killKey('left', this.keventleft );
         keyboard.killKey('right',this.keventright);
+        keyboard.killKey('up',   this.keventup   );
         keyboard.killKey('space',this.keventspace);
     }
 
