@@ -20,6 +20,10 @@ class Vector2D {
         return new Vector2D(this.x + vector.x, this.y + vector.y);
     }
 
+    sub(vector) {
+        return new Vector2D(this.x - vector.x, this.y - vector.y);
+    }
+
     at(x, y) {
         this.x = x;
         this.y = y;
@@ -87,6 +91,20 @@ class Rect {
         this.y = y;
         this.w = w;
         this.h = h;
+    }
+
+    get points() {
+        return [
+            [this.x, this.y + this.h], [this.x, this.y], [this.x + this.w, this.y], [this.x + this.w, this.y + this.h]
+        ];
+    }
+
+    static fromVectors2D(a, b) {
+        return new Rect(a.x, a.y, b.x, b.y);
+    }
+
+    static Points(x, y, w, h) {
+        return new Rect(x, y, w, h).points;
     }
 }
 

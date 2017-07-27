@@ -5,33 +5,36 @@ const Keyboard = require('./keyboard');
 const Sprite = require('./sprite');
 const SpriteSet = require('./spriteset');
 
-const defaultoptions = {
-    x : 0, y : 0, w : 0, h : 0,
-    initspeed : 1,
-    maxspeed : 3,
-    gravity : 0,
-    strength : 500,
-    jumpheight : 0,
-    controlled : false,
-    useimagesize : false,
-    friction : 0.2,
-    override : {}
+const defaultoptions = () => {
+    return {
+        x : 0, y : 0, w : 0, h : 0,
+        initspeed : 1,
+        maxspeed : 3,
+        gravity : 0,
+        strength : 500,
+        jumpheight : 0,
+        controlled : false,
+        useimagesize : false,
+        friction : 0.2,
+        override : {}
+    }
 };
 
-const defaulteffects = {
-    opacity : 1.0
+const defaulteffects = () => {
+    return { opacity : 1.0 };
 }
 
 class GraphicElement {
-    constructor(game, type, extra) {
+    constructor(game, type, extra = {}) {
         this.game = game;
         this.type = type;
-        this.options = Object.assign(defaultoptions, extra || {});
+        this.options = Object.assign(defaultoptions(), extra);
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
         this.strength = this.options.strength;
-        this.effects = Object.assign(defaulteffects, {});
+        this.effects = Object.assign(defaulteffects(), {});
+        this.sticked = false;
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
@@ -93,27 +96,32 @@ class GraphicElement {
     }
 
     isOnFloor() {
-        return this.vector.y >= (this.game.height - this.rect.y);
+        return this.sticked;
     }
 
     update() {
-        if (this.options.gravity) {
-            if (this.isOnFloor()) {
-                this.vector.y = this.game.height - this.rect.y;
-                this.vector.vely = 0;
-            }
+        this.vector.update();
 
-            if (this.sprite) {
-                if (this.vector.vely < 0) {
-                    this.sprite.changeState('jumping');
-                } else if (this.vector.vely > 0) {
-                    this.sprite.changeState('falling');
-                } else if (this.vector.velx != 0) {
-                    this.sprite.changeState('running');
-                } else {
-                    this.sprite.changeState('neutral');
-                }
-            }
+        if (this.options.gravity && this.vector.y + this.rect.y > this.game.height) {
+            this.vector.y = this.game.height - this.rect.y;
+            this.vector.vely = 0;
+            this.sticked = true;
+        }
+
+        return this;
+    }
+
+    updateState() {
+        if (this.vector.vely < 0) {
+            this.sprite.changeState('jumping');
+            this.sticked = false;
+        } else if (this.vector.vely > 0) {
+            this.sticked = false;
+            this.sprite.changeState('falling');
+        } else if (this.vector.velx != 0) {
+            this.sprite.changeState('running');
+        } else {
+            this.sprite.changeState('neutral');
         }
     }
 
@@ -122,9 +130,48 @@ class GraphicElement {
             this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
     }
 
+    get collisionPoints() {
+        return [
+            [this.vector.x + this.collision.x + this.collision.w, this.vector.y + this.collision.y],
+            [this.vector.x + this.collision.x, this.vector.y + this.collision.y],
+            [this.vector.x + this.collision.x, this.vector.y + this.collision.y + this.collision.h],
+            [this.vector.x + this.collision.x + this.collision.w, this.vector.y + this.collision.y + this.collision.h]
+        ]
+    }
+
     collide(context, gelement) {
-        if (this.strength >= gelement.strength) {
-            log('Collision', this.id);
+        if (this.strength <= gelement.strength) {
+            let A = this.collisionPoints;
+            let B = gelement.collisionPoints;
+            let C = [
+                A[0][0] - B[2][0], A[0][1] - B[2][1],
+                A[1][0] - B[3][0], A[1][1] - B[3][1],
+                A[2][0] - B[0][0], A[2][1] - B[0][1],
+                A[3][0] - B[1][0], A[3][1] - B[1][1]
+            ];
+
+            let smallindex = 0;
+            let smallest = C[smallindex];
+            for (let i = 1; i < C.length; i++) {
+                if (Math.abs(C[i]) < smallest) {
+                    smallindex = i;
+                    smallest = Math.abs(C[i]);
+                } 
+            }
+
+            // x or y
+            if (smallindex % 2 == 0) {
+                this.vector.velx = 0;
+                this.vector.accelx = 0;
+                this.vector.x -= C[smallindex];
+            } else {
+                if (this.vector.vely > 0) {
+                    this.sticked = true;
+                }
+
+                this.vector.vely = 0;
+                this.vector.y -= C[smallindex];
+            }
         }
     }
 
@@ -175,9 +222,6 @@ class GraphicElement {
     }
 
     draw(context, camera) {
-        this.vector.update();
-        this.update();
-
         let drawn = false;
         if (this.shouldBeDrawn(camera)) {
             const pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
@@ -201,6 +245,7 @@ class GraphicElement {
 
     jump() {
         if (this.isOnFloor()) {
+            this.sticked = false;
             if (this.override.jump) {
                 this.override.jump();
             } else {

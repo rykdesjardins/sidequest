@@ -42,6 +42,16 @@ class GraphicLayer {
         return this;
     }
 
+    updateStates() {
+        this.graphicselements.forEach(x => x.updateState());
+        return this;
+    }
+
+    update() {
+        this.graphicselements.forEach(x => x.update());
+        return this;
+    }
+
     draw(context, camera) {
         this.graphicselements.forEach(x => x.draw(context, camera));
         return this;
@@ -81,7 +91,7 @@ class Graphics {
 
     draw() {
         this.camera.update();
-        this.layers.forEach(x => x.impactCheck(this.context, this.camera).draw(this.context, this.camera));
+        this.layers.forEach(x => x.update().impactCheck(this.context, this.camera).updateStates().draw(this.context, this.camera));
     }
 }
 

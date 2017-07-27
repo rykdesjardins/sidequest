@@ -403,35 +403,40 @@ var Keyboard = require('./keyboard');
 var Sprite = require('./sprite');
 var SpriteSet = require('./spriteset');
 
-var defaultoptions = {
-    x: 0, y: 0, w: 0, h: 0,
-    initspeed: 1,
-    maxspeed: 3,
-    gravity: 0,
-    strength: 500,
-    jumpheight: 0,
-    controlled: false,
-    useimagesize: false,
-    friction: 0.2,
-    override: {}
+var defaultoptions = function defaultoptions() {
+    return {
+        x: 0, y: 0, w: 0, h: 0,
+        initspeed: 1,
+        maxspeed: 3,
+        gravity: 0,
+        strength: 500,
+        jumpheight: 0,
+        controlled: false,
+        useimagesize: false,
+        friction: 0.2,
+        override: {}
+    };
 };
 
-var defaulteffects = {
-    opacity: 1.0
+var defaulteffects = function defaulteffects() {
+    return { opacity: 1.0 };
 };
 
 var GraphicElement = function () {
-    function GraphicElement(game, type, extra) {
+    function GraphicElement(game, type) {
+        var extra = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
         _classCallCheck(this, GraphicElement);
 
         this.game = game;
         this.type = type;
-        this.options = Object.assign(defaultoptions, extra || {});
+        this.options = Object.assign(defaultoptions(), extra);
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
         this.strength = this.options.strength;
-        this.effects = Object.assign(defaulteffects, {});
+        this.effects = Object.assign(defaulteffects(), {});
+        this.sticked = false;
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
 
@@ -494,28 +499,34 @@ var GraphicElement = function () {
     }, {
         key: 'isOnFloor',
         value: function isOnFloor() {
-            return this.vector.y >= this.game.height - this.rect.y;
+            return this.sticked;
         }
     }, {
         key: 'update',
         value: function update() {
-            if (this.options.gravity) {
-                if (this.isOnFloor()) {
-                    this.vector.y = this.game.height - this.rect.y;
-                    this.vector.vely = 0;
-                }
+            this.vector.update();
 
-                if (this.sprite) {
-                    if (this.vector.vely < 0) {
-                        this.sprite.changeState('jumping');
-                    } else if (this.vector.vely > 0) {
-                        this.sprite.changeState('falling');
-                    } else if (this.vector.velx != 0) {
-                        this.sprite.changeState('running');
-                    } else {
-                        this.sprite.changeState('neutral');
-                    }
-                }
+            if (this.options.gravity && this.vector.y + this.rect.y > this.game.height) {
+                this.vector.y = this.game.height - this.rect.y;
+                this.vector.vely = 0;
+                this.sticked = true;
+            }
+
+            return this;
+        }
+    }, {
+        key: 'updateState',
+        value: function updateState() {
+            if (this.vector.vely < 0) {
+                this.sprite.changeState('jumping');
+                this.sticked = false;
+            } else if (this.vector.vely > 0) {
+                this.sticked = false;
+                this.sprite.changeState('falling');
+            } else if (this.vector.velx != 0) {
+                this.sprite.changeState('running');
+            } else {
+                this.sprite.changeState('neutral');
             }
         }
     }, {
@@ -526,8 +537,33 @@ var GraphicElement = function () {
     }, {
         key: 'collide',
         value: function collide(context, gelement) {
-            if (this.strength >= gelement.strength) {
-                log('Collision', this.id);
+            if (this.strength <= gelement.strength) {
+                var A = this.collisionPoints;
+                var B = gelement.collisionPoints;
+                var C = [A[0][0] - B[2][0], A[0][1] - B[2][1], A[1][0] - B[3][0], A[1][1] - B[3][1], A[2][0] - B[0][0], A[2][1] - B[0][1], A[3][0] - B[1][0], A[3][1] - B[1][1]];
+
+                var smallindex = 0;
+                var smallest = C[smallindex];
+                for (var i = 1; i < C.length; i++) {
+                    if (Math.abs(C[i]) < smallest) {
+                        smallindex = i;
+                        smallest = Math.abs(C[i]);
+                    }
+                }
+
+                // x or y
+                if (smallindex % 2 == 0) {
+                    this.vector.velx = 0;
+                    this.vector.accelx = 0;
+                    this.vector.x -= C[smallindex];
+                } else {
+                    if (this.vector.vely > 0) {
+                        this.sticked = true;
+                    }
+
+                    this.vector.vely = 0;
+                    this.vector.y -= C[smallindex];
+                }
             }
         }
     }, {
@@ -566,9 +602,6 @@ var GraphicElement = function () {
     }, {
         key: 'draw',
         value: function draw(context, camera) {
-            this.vector.update();
-            this.update();
-
             var drawn = false;
             if (this.shouldBeDrawn(camera)) {
                 var pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
@@ -594,6 +627,7 @@ var GraphicElement = function () {
         key: 'jump',
         value: function jump() {
             if (this.isOnFloor()) {
+                this.sticked = false;
                 if (this.override.jump) {
                     this.override.jump();
                 } else {
@@ -696,6 +730,11 @@ var GraphicElement = function () {
         get: function get() {
             return this.sprite.currentState.ready;
         }
+    }, {
+        key: 'collisionPoints',
+        get: function get() {
+            return [[this.vector.x + this.collision.x + this.collision.w, this.vector.y + this.collision.y], [this.vector.x + this.collision.x, this.vector.y + this.collision.y], [this.vector.x + this.collision.x, this.vector.y + this.collision.y + this.collision.h], [this.vector.x + this.collision.x + this.collision.w, this.vector.y + this.collision.y + this.collision.h]];
+        }
     }]);
 
     return GraphicElement;
@@ -774,6 +813,22 @@ var GraphicLayer = function () {
             return this;
         }
     }, {
+        key: 'updateStates',
+        value: function updateStates() {
+            this.graphicselements.forEach(function (x) {
+                return x.updateState();
+            });
+            return this;
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            this.graphicselements.forEach(function (x) {
+                return x.update();
+            });
+            return this;
+        }
+    }, {
         key: 'draw',
         value: function draw(context, camera) {
             this.graphicselements.forEach(function (x) {
@@ -831,7 +886,7 @@ var Graphics = function () {
 
             this.camera.update();
             this.layers.forEach(function (x) {
-                return x.impactCheck(_this.context, _this.camera).draw(_this.context, _this.camera);
+                return x.update().impactCheck(_this.context, _this.camera).updateStates().draw(_this.context, _this.camera);
             });
         }
     }]);
@@ -1120,6 +1175,11 @@ var Vector2D = function () {
             return new Vector2D(this.x + vector.x, this.y + vector.y);
         }
     }, {
+        key: "sub",
+        value: function sub(vector) {
+            return new Vector2D(this.x - vector.x, this.y - vector.y);
+        }
+    }, {
         key: "at",
         value: function at(x, y) {
             this.x = x;
@@ -1191,14 +1251,35 @@ var Vector2D = function () {
     return Vector2D;
 }();
 
-var Rect = function Rect(x, y, w, h) {
-    _classCallCheck(this, Rect);
+var Rect = function () {
+    function Rect(x, y, w, h) {
+        _classCallCheck(this, Rect);
 
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
-};
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+    }
+
+    _createClass(Rect, [{
+        key: "points",
+        get: function get() {
+            return [[this.x, this.y + this.h], [this.x, this.y], [this.x + this.w, this.y], [this.x + this.w, this.y + this.h]];
+        }
+    }], [{
+        key: "fromVectors2D",
+        value: function fromVectors2D(a, b) {
+            return new Rect(a.x, a.y, b.x, b.y);
+        }
+    }, {
+        key: "Points",
+        value: function Points(x, y, w, h) {
+            return new Rect(x, y, w, h).points;
+        }
+    }]);
+
+    return Rect;
+}();
 
 var Collider = function () {
     function Collider() {
