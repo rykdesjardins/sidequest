@@ -26,7 +26,7 @@ class GraphicLayer {
         return this;
     }
 
-    impactCheck(camera) {
+    impactCheck(context, camera) {
         for (let i = 0; i < this.graphicselements.length; i++) {
             for (let j = i+1; j < this.graphicselements.length; j++) {
                 if (Physics.Collider.rectangles(
@@ -34,8 +34,8 @@ class GraphicLayer {
                         this.graphicselements[j].collisionBox(camera)
                     )
                 ) {
-                    this.graphicselements[i].collide(this.graphicselements[j]);
-                    this.graphicselements[j].collide(this.graphicselements[i]);
+                    this.graphicselements[i].collide(context, this.graphicselements[j]);
+                    this.graphicselements[j].collide(context, this.graphicselements[i]);
                 }
             }
         }
@@ -81,7 +81,7 @@ class Graphics {
 
     draw() {
         this.camera.update();
-        this.layers.forEach(x => x.impactCheck(this.camera).draw(this.context, this.camera));
+        this.layers.forEach(x => x.impactCheck(this.context, this.camera).draw(this.context, this.camera));
     }
 }
 

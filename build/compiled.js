@@ -525,9 +525,9 @@ var GraphicElement = function () {
         }
     }, {
         key: 'collide',
-        value: function collide(gelement) {
+        value: function collide(context, gelement) {
             if (this.strength >= gelement.strength) {
-                log('Collision', this.id + ' will affect ' + gelement.id);
+                log('Collision', this.id);
             }
         }
     }, {
@@ -762,12 +762,12 @@ var GraphicLayer = function () {
         }
     }, {
         key: 'impactCheck',
-        value: function impactCheck(camera) {
+        value: function impactCheck(context, camera) {
             for (var i = 0; i < this.graphicselements.length; i++) {
                 for (var j = i + 1; j < this.graphicselements.length; j++) {
                     if (Physics.Collider.rectangles(this.graphicselements[i].collisionBox(camera), this.graphicselements[j].collisionBox(camera))) {
-                        this.graphicselements[i].collide(this.graphicselements[j]);
-                        this.graphicselements[j].collide(this.graphicselements[i]);
+                        this.graphicselements[i].collide(context, this.graphicselements[j]);
+                        this.graphicselements[j].collide(context, this.graphicselements[i]);
                     }
                 }
             }
@@ -831,7 +831,7 @@ var Graphics = function () {
 
             this.camera.update();
             this.layers.forEach(function (x) {
-                return x.impactCheck(_this.camera).draw(_this.context, _this.camera);
+                return x.impactCheck(_this.context, _this.camera).draw(_this.context, _this.camera);
             });
         }
     }]);

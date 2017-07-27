@@ -122,9 +122,9 @@ class GraphicElement {
             this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
     }
 
-    collide(gelement) {
+    collide(context, gelement) {
         if (this.strength >= gelement.strength) {
-            log('Collision', this.id + ' will affect ' + gelement.id);
+            log('Collision', this.id);
         }
     }
 
