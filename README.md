@@ -25,7 +25,7 @@ A side-scroll game engine, in the browser
  
  [✓] Collision detection
  
- [ ] Fall blocking using collision logic
+ [✓] Fall blocking using collision logic
  
  [ ] Zoom computing according to browser size
  
