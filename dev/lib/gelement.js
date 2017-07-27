@@ -160,6 +160,11 @@ class GraphicElement {
             }
 
             // x or y
+            if (this.game.options.env == "dev") {
+                context.fillStyle = "green";
+                context.fillText("Collision clipping", this.vector.x, this.vector.y - 10);
+            }
+
             if (smallindex % 2 == 0) {
                 this.vector.velx = 0;
                 this.vector.accelx = 0;
@@ -215,10 +220,10 @@ class GraphicElement {
         context.fillStyle = "black";
         context.fillText("Relative " + this.vector.x + " x " + this.vector.y, pos.x + pos.w + 5, pos.y + 10);
         context.fillText("Real " + (this.vector.x - camera.rect.x) + " x " + (this.vector.y - camera.rect.y), pos.x + pos.w + 5, pos.y + 24);
-        context.fillText("State : " + this.sprite.state, pos.x + pos.w + 5, pos.y + 38);
-        context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 52);
-        context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 66);
-        context.fillText("Drawn : " + (drawn ? "Yes" : "No") + ", strength : " + this.strength, pos.x + pos.w + 5, pos.y + 80);
+        context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 38);
+        context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 22);
+        context.fillText("State : " + this.sprite.state, pos.x + pos.w + 5, pos.y + 66);
+        context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
     }
 
     draw(context, camera) {

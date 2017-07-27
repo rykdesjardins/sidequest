@@ -552,6 +552,11 @@ var GraphicElement = function () {
                 }
 
                 // x or y
+                if (this.game.options.env == "dev") {
+                    context.fillStyle = "green";
+                    context.fillText("Collision clipping", this.vector.x, this.vector.y - 10);
+                }
+
                 if (smallindex % 2 == 0) {
                     this.vector.velx = 0;
                     this.vector.accelx = 0;
