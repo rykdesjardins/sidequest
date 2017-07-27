@@ -27,6 +27,14 @@
             upbrick.setPosition(580, game.graphics.h - 164),
             game.graphics.addElement(2, 'upbrick', upbrick);
 
+            var thirdbrick = new SideQuest.GraphicElement(game, "image", {url : "/brick.jpg",
+                w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64),
+                strength : 2000
+            });
+            thirdbrick.setPosition(760, game.graphics.h - 264),
+            game.graphics.addElement(2, 'thirdbrick', thirdbrick);
+
+
             var player = new SideQuest.GraphicElement(game, "sprite", {
                 x : 20, y : 20,
                 w : 120, h : 100,

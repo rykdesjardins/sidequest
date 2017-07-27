@@ -187,7 +187,9 @@ var Camera = function () {
         key: 'updateFromBound',
         value: function updateFromBound() {
             var half = this.rect.w / 2;
+            var halfy = this.rect.h / 2;
             var realx = this.following.vector.x - this.rect.x;
+            var realy = this.following.vector.y - this.rect.y;
 
             if (realx > half + this.following.rect.x) {
                 this.rect.x += realx - this.following.rect.x - half;
@@ -195,8 +197,18 @@ var Camera = function () {
                 this.rect.x -= half - (realx + this.following.rect.x);
             }
 
+            if (realy > halfy) {
+                this.rect.y += realy - halfy;
+            } else if (realy + this.following.rect.y < halfy) {
+                this.rect.y -= halfy - (realy + this.following.rect.y);
+            }
+
             if (this.rect.x < 0) {
                 this.rect.x = 0;
+            }
+
+            if (this.rect.y > 0) {
+                this.rect.y = 0;
             }
         }
     }, {
@@ -551,7 +563,6 @@ var GraphicElement = function () {
                     }
                 }
 
-                // x or y
                 if (smallindex % 2 == 0) {
                     this.vector.velx = 0;
                     this.vector.accelx = 0;
@@ -594,10 +605,10 @@ var GraphicElement = function () {
             context.fillStyle = "black";
             context.fillText("Relative " + this.vector.x + " x " + this.vector.y, pos.x + pos.w + 5, pos.y + 10);
             context.fillText("Real " + (this.vector.x - camera.rect.x) + " x " + (this.vector.y - camera.rect.y), pos.x + pos.w + 5, pos.y + 24);
-            context.fillText("State : " + this.sprite.state, pos.x + pos.w + 5, pos.y + 38);
-            context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 52);
-            context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 66);
-            context.fillText("Drawn : " + (drawn ? "Yes" : "No") + ", strength : " + this.strength, pos.x + pos.w + 5, pos.y + 80);
+            context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 38);
+            context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 52);
+            context.fillText("State : " + this.sprite.state + (this.controlled ? ", controlled" : ""), pos.x + pos.w + 5, pos.y + 66);
+            context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
         }
     }, {
         key: 'draw',
@@ -669,7 +680,7 @@ var GraphicElement = function () {
 
                 if (mod == -1 && this.vector.velx > 0 || mod == 1 && this.vector.velx < 0) {
                     this.vector.setAcceleration(this.options.friction * mod, this.vector.accely, true);
-                } else {
+                } else if (this.vector.velx != 0) {
                     this.vector.setAcceleration(this.options.friction * -mod, this.vector.accely, true);
                 }
 
@@ -1289,7 +1300,7 @@ var Collider = function () {
     _createClass(Collider, null, [{
         key: "rectangles",
         value: function rectangles(a, b) {
-            return !(a.y + a.h < b.y || a.y > b.y + b.h || a.x + a.w < b.x || a.x > b.x + b.w);
+            return !(a.y + a.h <= b.y || a.y >= b.y + b.h || a.x + a.w <= b.x || a.x >= b.x + b.w);
         }
     }, {
         key: "vectors",
