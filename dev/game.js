@@ -8,13 +8,13 @@ const Sprite = require('./lib/sprite');
 const GraphicElement = require('./lib/gelement');
 const Physics = require('./lib/physics');
 const Keyboard = require('./lib/keyboard');
+const World = require('./lib/world');
 
 class Game {
     static defaults() {
         return {
             bgcolor : "#eaeff2",
             fps : 60,
-            layers : 5,
             env : "prod"
         };
     }
@@ -30,9 +30,9 @@ class Game {
         this.options = Object.assign(Game.defaults(), options);
         this.gamedebugger = new Debugger(this.canvas);
 
-        this.graphics = new Graphics(this.context, this.options);
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
+        this.world = new World(this.context, this.options.world);
 
         if (this.options.env == "dev") {
             glob.__SIDESCROLLGAME.env == "dev";
@@ -68,7 +68,7 @@ class Game {
         this.width  = width;
         this.height = height;
 
-        this.graphics.resize(width, height);
+        this.world.resize(width, height);
         log("Game", `Handled resized at ${width} x ${height}`);
     }
 
@@ -78,14 +78,18 @@ class Game {
 
     start() {
         log("Game", "Starting engine");
+        if (!this.world.hasStage()) {
+            throw new Error("[Game] Cannot start game without a stage");
+        }
+
+        this.resize();
         this.frameRequest = requestAnimationFrame((time) => {this.draw(time)});
         return this;
     }
 
     update() {
-        this.graphics.clear();
-        this.graphics.draw();
         this.gamedebugger.ping();
+        this.world.update();
         return this;
     }
 
@@ -96,6 +100,7 @@ class Game {
             this.timing.frame++;
 
             this.update();
+            this.world.draw();
         }
 
         this.frameRequest = requestAnimationFrame((time) => {this.draw(time)});
@@ -103,4 +108,4 @@ class Game {
     }
 }
 
-glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, log }
+glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, World, log }

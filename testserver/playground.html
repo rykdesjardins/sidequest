@@ -8,43 +8,33 @@
 
         <script src="//localhost:8088/build/compiled.js"></script>
         <script>
-            var game = new SideQuest.Game("gamecontainer", {env : "dev"}).start();
-            var cloud = new SideQuest.GraphicElement(game, "image", {url : "/cloud.png", useimagesize : true});
-            cloud.setPosition(40, 20);
-            game.graphics.addElement(0, 'cloud', cloud);
+            var game = new SideQuest.Game("gamecontainer", {env : "dev"});
+            var stage = game.world.createStage("mainstage", {}, false, true);
+            var h = game.height;
+            var w = game.width;
 
-            var brick = new SideQuest.GraphicElement(game, "image", {url : "/brick.jpg",
-                w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64),
-                strength : 2000
-            });
-            brick.setPosition(400, game.graphics.h - 64),
-            game.graphics.addElement(2, 'brick', brick);
+            SideQuest.GraphicElement.createTemplate('brick', "image", { url : "/brick.jpg", w : 64, h : 64, strength : 2000 });
+            SideQuest.GraphicElement.createTemplate('cloud', "image", { url : "/cloud.png", useimagesize : true}, {opacity:0.6});
+            
+            stage.graphics.addElement(0, 'c1', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 40,  y : 20 } ));
+            stage.graphics.addElement(4, 'c2', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 160, y : 80 } ));
+            stage.graphics.addElement(0, 'c3', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 540, y : 40 } ));
 
-            var upbrick = new SideQuest.GraphicElement(game, "image", {url : "/brick.jpg",
-                w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64),
-                strength : 2000
-            });
-            upbrick.setPosition(580, game.graphics.h - 164),
-            game.graphics.addElement(2, 'upbrick', upbrick);
-
-            var thirdbrick = new SideQuest.GraphicElement(game, "image", {url : "/brick.jpg",
-                w : 64, h : 64, collision : new SideQuest.Physics.Rect(0, 0, 64, 64),
-                strength : 2000
-            });
-            thirdbrick.setPosition(760, game.graphics.h - 264),
-            game.graphics.addElement(2, 'thirdbrick', thirdbrick);
-
+            stage.graphics.addElement(2, 'b1', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 400, y : h - 64  }));
+            stage.graphics.addElement(2, 'b2', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 580, y : h - 164 }));
+            stage.graphics.addElement(2, 'b3', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 760, y : h - 264 }));
+            stage.graphics.addElement(2, 'b4', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 580, y : h - 364 }));
+            stage.graphics.addElement(2, 'b5', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 350, y : h - 364 }));
 
             var player = new SideQuest.GraphicElement(game, "sprite", {
-                x : 20, y : 20,
+                x : 20, y : 20, 
                 w : 120, h : 100,
-
-                strength: 1200,
-
                 collision : new SideQuest.Physics.Rect(30, 20, 50, 78),
 
                 initspeed : 1,   maxspeed   : 7,    friction   : 0.4,
                 gravity   : 0.5, maxgravity : 15,   jumpheight : 11,
+
+                strength: 1200,
 
                 sprite : new SideQuest.Sprite({
                     spritesets : {
@@ -56,9 +46,11 @@
                 })
             });
 
-            game.graphics.addElement(2, 'player', player);
-            game.graphics.camera.follow(player);
+            stage.graphics.addElement(2, 'player', player);
+            stage.graphics.camera.follow(player);
             player.control(game.keyboard, {arrows : true});
+
+            game.start();
         </script>
     </body>
 </html>

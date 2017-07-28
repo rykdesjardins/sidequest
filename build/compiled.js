@@ -15,6 +15,7 @@ var Sprite = require('./lib/sprite');
 var GraphicElement = require('./lib/gelement');
 var Physics = require('./lib/physics');
 var Keyboard = require('./lib/keyboard');
+var World = require('./lib/world');
 
 var Game = function () {
     _createClass(Game, null, [{
@@ -23,7 +24,6 @@ var Game = function () {
             return {
                 bgcolor: "#eaeff2",
                 fps: 60,
-                layers: 5,
                 env: "prod"
             };
         }
@@ -46,9 +46,9 @@ var Game = function () {
         this.options = Object.assign(Game.defaults(), options);
         this.gamedebugger = new Debugger(this.canvas);
 
-        this.graphics = new Graphics(this.context, this.options);
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
+        this.world = new World(this.context, this.options.world);
 
         if (this.options.env == "dev") {
             glob.__SIDESCROLLGAME.env == "dev";
@@ -87,7 +87,7 @@ var Game = function () {
             this.width = width;
             this.height = height;
 
-            this.graphics.resize(width, height);
+            this.world.resize(width, height);
             log("Game", 'Handled resized at ' + width + ' x ' + height);
         }
     }, {
@@ -105,6 +105,11 @@ var Game = function () {
             var _this2 = this;
 
             log("Game", "Starting engine");
+            if (!this.world.hasStage()) {
+                throw new Error("[Game] Cannot start game without a stage");
+            }
+
+            this.resize();
             this.frameRequest = requestAnimationFrame(function (time) {
                 _this2.draw(time);
             });
@@ -113,9 +118,8 @@ var Game = function () {
     }, {
         key: 'update',
         value: function update() {
-            this.graphics.clear();
-            this.graphics.draw();
             this.gamedebugger.ping();
+            this.world.update();
             return this;
         }
     }, {
@@ -129,6 +133,7 @@ var Game = function () {
                 this.timing.frame++;
 
                 this.update();
+                this.world.draw();
             }
 
             this.frameRequest = requestAnimationFrame(function (time) {
@@ -141,9 +146,9 @@ var Game = function () {
     return Game;
 }();
 
-glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics, Keyboard: Keyboard, Mouse: Mouse, log: log };
+glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics, Keyboard: Keyboard, Mouse: Mouse, World: World, log: log };
 
-},{"./lib/debugger":3,"./lib/gelement":5,"./lib/glob":6,"./lib/graphics":7,"./lib/keyboard":8,"./lib/log":9,"./lib/mouse":10,"./lib/physics":11,"./lib/sprite":12,"./lib/spriteset":13}],2:[function(require,module,exports){
+},{"./lib/debugger":3,"./lib/gelement":5,"./lib/glob":6,"./lib/graphics":7,"./lib/keyboard":8,"./lib/log":9,"./lib/mouse":10,"./lib/physics":11,"./lib/sprite":12,"./lib/spriteset":13,"./lib/world":14}],2:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -415,39 +420,75 @@ var Keyboard = require('./keyboard');
 var Sprite = require('./sprite');
 var SpriteSet = require('./spriteset');
 
-var defaultoptions = function defaultoptions() {
-    return {
-        x: 0, y: 0, w: 0, h: 0,
-        initspeed: 1,
-        maxspeed: 3,
-        gravity: 0,
-        strength: 500,
-        jumpheight: 0,
-        controlled: false,
-        useimagesize: false,
-        friction: 0.2,
-        override: {}
-    };
-};
-
-var defaulteffects = function defaulteffects() {
-    return { opacity: 1.0 };
-};
+var GraphicElementTemplates = {};
 
 var GraphicElement = function () {
+    _createClass(GraphicElement, null, [{
+        key: 'defaultoptions',
+        value: function defaultoptions() {
+            return {
+                x: 0, y: 0,
+                w: 0, h: 0,
+                useimagesize: false,
+
+                initspeed: 1, maxspeed: 3, friction: 0.2,
+                gravity: 0, maxgravity: 0, jumpheight: 0,
+
+                strength: 500,
+                controlled: false,
+
+                override: {}
+            };
+        }
+    }, {
+        key: 'defaulteffects',
+        value: function defaulteffects() {
+            return {
+                opacity: 1.0
+            };
+        }
+    }, {
+        key: 'createTemplate',
+        value: function createTemplate(id, type) {
+            var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+            var effects = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+            var overwrite = arguments[4];
+
+            if (!overwrite && GraphicElementTemplates[id]) {
+                throw new Error('[GraphicElement] Template with id ' + id + ' already exists');
+            }
+
+            GraphicElementTemplates[id] = { type: type, options: options, effects: effects };
+        }
+    }, {
+        key: 'fromTemplate',
+        value: function fromTemplate(game, id) {
+            var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+            var effects = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
+
+            var template = GraphicElementTemplates[id];
+            if (!template) {
+                throw new Error('[GraphicElement] Tried to initialize with undefined template : ' + id);
+            }
+
+            return new GraphicElement(game, template.type, Object.assign(template.options, options), Object.assign(template.effects, effects));
+        }
+    }]);
+
     function GraphicElement(game, type) {
         var extra = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+        var effects = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
 
         _classCallCheck(this, GraphicElement);
 
         this.game = game;
         this.type = type;
-        this.options = Object.assign(defaultoptions(), extra);
+        this.options = Object.assign(GraphicElement.defaultoptions(), extra);
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
         this.strength = this.options.strength;
-        this.effects = Object.assign(defaulteffects(), {});
+        this.effects = Object.assign(GraphicElement.defaulteffects(), effects);
         this.sticked = false;
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
@@ -533,8 +574,8 @@ var GraphicElement = function () {
                 this.sprite.changeState('jumping');
                 this.sticked = false;
             } else if (this.vector.vely > 0) {
-                this.sticked = false;
                 this.sprite.changeState('falling');
+                this.sticked = false;
             } else if (this.vector.velx != 0) {
                 this.sprite.changeState('running');
             } else {
@@ -615,7 +656,10 @@ var GraphicElement = function () {
         value: function draw(context, camera) {
             var drawn = false;
             if (this.shouldBeDrawn(camera)) {
+                context.globalAlpha = this.effects.opacity;
                 var pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
+                context.globalAlpha = 1;
+
                 drawn = !!pos;
                 if (this.options.useimagesize && pos) {
                     this.rect.x = pos.w;
@@ -853,11 +897,22 @@ var GraphicLayer = function () {
 }();
 
 var Graphics = function () {
-    function Graphics(context, options) {
+    _createClass(Graphics, null, [{
+        key: 'defaultOptions',
+        value: function defaultOptions() {
+            return {
+                bgcolor: "#eaeff2"
+            };
+        }
+    }]);
+
+    function Graphics(context) {
+        var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
         _classCallCheck(this, Graphics);
 
         this.context = this.c = context;
-        this.options = options;
+        this.options = Object.assign(Graphics.defaultOptions(), options);
         this.camera = new Camera(context.width, context.height);
 
         this.layers = [];
@@ -891,13 +946,22 @@ var Graphics = function () {
             this.layers[layerid].addElement(elementid, element);
         }
     }, {
-        key: 'draw',
-        value: function draw() {
+        key: 'update',
+        value: function update() {
             var _this = this;
 
             this.camera.update();
             this.layers.forEach(function (x) {
-                return x.update().impactCheck(_this.context, _this.camera).updateStates().draw(_this.context, _this.camera);
+                return x.update().impactCheck(_this.context, _this.camera).updateStates();
+            });
+        }
+    }, {
+        key: 'draw',
+        value: function draw() {
+            var _this2 = this;
+
+            this.layers.forEach(function (x) {
+                return x.draw(_this2.context, _this2.camera);
             });
         }
     }]);
@@ -1537,4 +1601,147 @@ var SpriteSet = function () {
 
 module.exports = SpriteSet;
 
-},{"./log":9,"./physics":11}]},{},[1]);
+},{"./log":9,"./physics":11}],14:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var log = require('./log');
+var Physics = require('./physics');
+var Graphics = require('./graphics');
+
+var World = function () {
+    function World(context) {
+        var stages = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+        _classCallCheck(this, World);
+
+        this.context = context;
+        this.stages = stages;
+        this.currentStage;
+    }
+
+    _createClass(World, [{
+        key: 'createStage',
+        value: function createStage(id) {
+            var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+            var overwrite = arguments[2];
+            var switchto = arguments[3];
+
+            if (!overwrite && this.stages[id]) {
+                throw new Error('[World] Stage with id ' + id + ' already exists');
+            }
+
+            var stage = new Stage(id, this.context, options);
+            this.stages[id] = stage;
+            stage.fire("added");
+
+            switchto && this.switchStage(id);
+
+            return stage;
+        }
+    }, {
+        key: 'switchStage',
+        value: function switchStage(id) {
+            if (!this.stages[id]) {
+                throw new Error('[World] Stage with id ' + id + ' does not exist');
+            }
+
+            this.currentStage && this.currentStage.fire("switchout");
+
+            this.currentStage = this.stages[id];
+            this.currentStage.fire("switchin");
+        }
+    }, {
+        key: 'resize',
+        value: function resize(w, h) {
+            for (var id in this.stages) {
+                this.stages[id].graphics.resize(w, h);
+            }
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            this.stage.update();
+        }
+    }, {
+        key: 'draw',
+        value: function draw() {
+            this.stage.draw();
+        }
+    }, {
+        key: 'hasStage',
+        value: function hasStage() {
+            return !!this.currentStage;
+        }
+    }, {
+        key: 'stage',
+        get: function get() {
+            return this.currentStage;
+        }
+    }]);
+
+    return World;
+}();
+
+/*
+ *  Events : added, switchout, switchin
+ * */
+
+
+var Stage = function () {
+    _createClass(Stage, null, [{
+        key: 'defaultOptions',
+        value: function defaultOptions() {
+            return {
+                size: new Physics.Vector2D(1920, 1080),
+                hooks: {},
+                layers: 5
+            };
+        }
+    }]);
+
+    function Stage(id, context) {
+        var options = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+
+        _classCallCheck(this, Stage);
+
+        this.id = id;
+        this.options = Object.assign(Stage.defaultOptions(), options);
+        this.context = context;
+
+        this.graphics = new Graphics(this.context, this.options);
+    }
+
+    _createClass(Stage, [{
+        key: 'fire',
+        value: function fire(event, extra) {
+            var callback = this.options.hooks[event];
+            callback && callback(extra);
+        }
+    }, {
+        key: 'on',
+        value: function on(event, callback) {
+            this.hooks[event] = callback;
+        }
+    }, {
+        key: 'update',
+        value: function update() {
+            this.graphics.update();
+        }
+    }, {
+        key: 'draw',
+        value: function draw() {
+            this.graphics.clear();
+            this.graphics.draw();
+        }
+    }]);
+
+    return Stage;
+}();
+
+module.exports = World;
+
+},{"./graphics":7,"./log":9,"./physics":11}]},{},[1]);

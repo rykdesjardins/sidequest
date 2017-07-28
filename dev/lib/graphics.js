@@ -59,9 +59,15 @@ class GraphicLayer {
 }
 
 class Graphics {
-    constructor(context, options) {
+    static defaultOptions() {
+        return {
+            bgcolor : "#eaeff2"
+        };
+    }
+
+    constructor(context, options = {}) {
         this.context = this.c = context;
-        this.options = options;
+        this.options = Object.assign(Graphics.defaultOptions(), options);
         this.camera = new Camera(context.width, context.height);
 
         this.layers = [];
@@ -89,9 +95,13 @@ class Graphics {
         this.layers[layerid].addElement(elementid, element);
     }
 
-    draw() {
+    update() {
         this.camera.update();
-        this.layers.forEach(x => x.update().impactCheck(this.context, this.camera).updateStates().draw(this.context, this.camera));
+        this.layers.forEach(x => x.update().impactCheck(this.context, this.camera).updateStates());
+    }
+
+    draw() {
+        this.layers.forEach(x => x.draw(this.context, this.camera));
     }
 }
 
