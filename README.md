@@ -1,7 +1,7 @@
 # sidequest
 A side-scroll game engine, in the browser
 
-![Screenshot](https://erikdesjardins.com/static/git/sidequest1.jpg)
+![Screenshot](https://erikdesjardins.com/static/git/sidequest2.png)
 
 ## Milestones
  [✓] ES6 Setup with Babel and babili
@@ -28,6 +28,10 @@ A side-scroll game engine, in the browser
   
  [✓] Wrapping stages in Stages, then Worlds
  
+ [✓] Camera and Graphic Elements positions fixed to stage size
+
+ [✓] Graphic Elements image patterns 
+
  [✓] Zoom computing according to browser size
  
  [ ] Music and sound loading, playing and hooks
