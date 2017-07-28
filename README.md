@@ -28,7 +28,7 @@ A side-scroll game engine, in the browser
   
  [✓] Wrapping stages in Stages, then Worlds
  
- [ ] Zoom computing according to browser size
+ [✓] Zoom computing according to browser size
  
  [ ] Music and sound loading, playing and hooks
  
