@@ -12,7 +12,6 @@ A side-scroll game engine, in the browser
  
  [✓] Game instance 
  
- 
  [✓] Basic physics : Vectors (2D), velocity and acceleration
  
  [✓] Position based on camera
@@ -27,7 +26,7 @@ A side-scroll game engine, in the browser
  
  [✓] Fall blocking using collision logic
  
- [ ] Zoom computing according to browser size
+ [✓] Zoom computing according to browser size
  
  [ ] Music and sound loading, playing and hooks
  
