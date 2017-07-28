@@ -5,6 +5,7 @@ class Camera {
     constructor(ox, oy, w, h, vmod) {
         this.rect = new Physics.Rect(0, 0, w, h);
         this.origin = new Physics.Vector2D(ox, oy);
+        this.limits = new Physics.Vector2D(w, h);
         this.vmod = vmod; 
 
         this.following;
@@ -21,6 +22,10 @@ class Camera {
     resize(w, h) {
         this.rect.w = w;
         this.rect.h = h;
+    }
+
+    setLimits(vector) {
+        this.limits = vector;
     }
 
     updateFromBound() {
@@ -43,10 +48,14 @@ class Camera {
 
         if (this.rect.x < 0) {
             this.rect.x = 0;
+        } else if (this.rect.x + this.rect.w > this.limits.x) {
+            this.rect.x = this.limits.x - this.rect.w;
         }
 
         if (this.rect.y > 0) {
             this.rect.y = 0;
+        } else if (this.rect.y - this.rect.h < -this.limits.y) {
+            this.rect.y = -(this.limits.y - this.rect.h);
         }
     }
 

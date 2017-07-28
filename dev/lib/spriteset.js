@@ -1,5 +1,6 @@
 const log = require('./log');
 const Physics = require('./physics');
+const DOM = require('./dom');
 
 class SpriteState {
     constructor(bitmap, index) {
@@ -19,6 +20,8 @@ class SpriteSet {
         this.totalstates = totalstates || 1;
         this.noloop = noloop;
         this.states = [];
+        this.patterns = [];
+        this.pattern = false;
 
         log('SpriteSet', 'Creating new Sprite Set from ' + this.url + ' with ' + this.totalstates + ' states');
         if (type === "singleimage") {
@@ -34,6 +37,10 @@ class SpriteSet {
 
     get currentFrame() {
         return this.states[this.frame];
+    }
+
+    get currentPattern() {
+        return this.patterns[this.frame];
     }
 
     getImageFromURL(url, send) {
@@ -73,6 +80,8 @@ class SpriteSet {
             let imageIndex = -1;
             const loadNextImage = () => {
                 if (++imageIndex == this.totalstates) {
+                    this.onready && this.onready();
+
                     this.ready = true;
                     log('SpriteSet', 'Done loading states for SpriteSet with url ' + this.url);
 
@@ -89,6 +98,36 @@ class SpriteSet {
         }
     }
 
+    createPattern(context, imagesize) {
+        this.pattern = true;
+
+        const actuallyCreatePattern = () => {
+            this.states.forEach(state => {
+                const offCanvas = DOM.create({ node : "canvas" });
+                if (!imagesize) {
+                    imagesize = new Physics.Vector2D(state.width, state.height);
+                }
+
+                offCanvas.width = imagesize.x;
+                offCanvas.height = imagesize.y;
+                offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
+
+                this.patterns.push( {
+                    pattern : context.createPattern(offCanvas, "repeat"),
+                    canvas : offCanvas
+                });
+            });
+
+            log('SpriteSet', 'Loaded pattern for ' + this.states.length + " states");
+        };
+
+        if (this.ready) {
+            actuallyCreatePattern();
+        } else {
+            this.onready = actuallyCreatePattern;
+        }
+    }
+
     draw(context, x, y, w, h) {
         if (!this.ready) {
             return;
@@ -98,7 +137,12 @@ class SpriteSet {
         y = y || 0;
         w = w || this.currentFrame.width;
         h = h || this.currentFrame.height;
-        context.drawImage(this.currentFrame, x, y, w, h);
+        if (this.pattern) {
+            context.fillStyle = this.currentPattern.pattern;
+            context.fillRect(x, y, w, h);
+        } else {
+            context.drawImage(this.currentFrame, x, y, w, h);
+        }
         this.drew++;
         if (this.framestateupdate && this.drew == this.framestateupdate) {
             this.drew = 0;
@@ -109,7 +153,10 @@ class SpriteSet {
     }
 
     destroy() {
-        
+        this.patterns.forEach(pat => {
+            pat.canvas.remove();
+            pat.pattern = undefined;  // Not sure if necessary
+        });
     }
 }
 

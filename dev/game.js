@@ -98,6 +98,9 @@ class Game {
         this.frameRequest = requestAnimationFrame((time) => {this.draw(time)});
         return this;
     }
+
+    // Shortcut
+    createStage() { return this.world.createStage(...arguments) }
 }
 
 glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, World, log }

@@ -132,6 +132,16 @@ var Game = function () {
             });
             return this;
         }
+
+        // Shortcut
+
+    }, {
+        key: 'createStage',
+        value: function createStage() {
+            var _world;
+
+            return (_world = this.world).createStage.apply(_world, arguments);
+        }
     }]);
 
     return Game;
@@ -155,6 +165,7 @@ var Camera = function () {
 
         this.rect = new Physics.Rect(0, 0, w, h);
         this.origin = new Physics.Vector2D(ox, oy);
+        this.limits = new Physics.Vector2D(w, h);
         this.vmod = vmod;
 
         this.following;
@@ -183,6 +194,11 @@ var Camera = function () {
             this.rect.h = h;
         }
     }, {
+        key: 'setLimits',
+        value: function setLimits(vector) {
+            this.limits = vector;
+        }
+    }, {
         key: 'updateFromBound',
         value: function updateFromBound() {
             var half = this.rect.w / 2;
@@ -204,10 +220,14 @@ var Camera = function () {
 
             if (this.rect.x < 0) {
                 this.rect.x = 0;
+            } else if (this.rect.x + this.rect.w > this.limits.x) {
+                this.rect.x = this.limits.x - this.rect.w;
             }
 
             if (this.rect.y > 0) {
                 this.rect.y = 0;
+            } else if (this.rect.y - this.rect.h < -this.limits.y) {
+                this.rect.y = -(this.limits.y - this.rect.h);
             }
         }
     }, {
@@ -429,7 +449,8 @@ var GraphicElement = function () {
                 gravity: 0, maxgravity: 0, jumpheight: 0,
 
                 strength: 500,
-                controlled: false,
+                controlled: false, fixedtostage: false,
+                pattern: false, patternsize: undefined,
 
                 override: {}
             };
@@ -533,6 +554,10 @@ var GraphicElement = function () {
                 useimagesize: this.options.useimagesize
             });
 
+            if (this.options.pattern) {
+                this.sprite.createPattern(this.game.context, this.options.patternsize);
+            }
+
             log('GElement', "Initialized Graphic Element with image at " + this.url);
         }
     }, {
@@ -580,6 +605,24 @@ var GraphicElement = function () {
         key: 'shouldBeDrawn',
         value: function shouldBeDrawn(camera) {
             return this.vector.x - camera.rect.x + this.rect.x > 0 && this.vector.x - camera.rect.x < camera.rect.w && this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
+        }
+    }, {
+        key: 'restrict',
+        value: function restrict(camera, size) {
+            if (this.vector.x + this.collision.x < 0) {
+                this.vector.x = -this.collision.x;
+                this.vector.velx = 0;
+                this.vector.accelx = 0;
+            } else if (this.vector.x + this.collision.x + this.collision.w > size.x) {
+                this.vector.x = size.x - this.collision.x - this.collision.w;
+                this.vector.velx = 0;
+                this.vector.accelx = 0;
+            }
+
+            if (-(this.vector.y + this.collision.y) > size.y - camera.rect.h) {
+                this.vector.y = -(size.y - camera.rect.h) - this.collision.y;
+                this.vector.vely = 0;
+            }
         }
     }, {
         key: 'collide',
@@ -757,8 +800,8 @@ var GraphicElement = function () {
             }
         }
     }, {
-        key: 'giveupControll',
-        value: function giveupControll() {
+        key: 'giveupControl',
+        value: function giveupControl() {
             keyboard.killKey('left', this.keventleft);
             keyboard.killKey('right', this.keventright);
             keyboard.killKey('up', this.keventup);
@@ -771,7 +814,7 @@ var GraphicElement = function () {
             this.imagebitmap && this.imagebitmap.close();
             this.image && this.image.remove();
             if (this.controlled) {
-                this.giveupControll();
+                this.giveupControl();
             }
         }
     }, {
@@ -819,10 +862,11 @@ var Camera = require('./camera');
 var Physics = require('./physics');
 
 var GraphicLayer = function () {
-    function GraphicLayer(index) {
+    function GraphicLayer(index, size) {
         _classCallCheck(this, GraphicLayer);
 
         this.index = index;
+        this.size = size;
 
         this.graphicselements = [];
         this._assocGE = {};
@@ -852,6 +896,8 @@ var GraphicLayer = function () {
         key: 'impactCheck',
         value: function impactCheck(context, camera) {
             for (var i = 0; i < this.graphicselements.length; i++) {
+                this.graphicselements[i].options.fixedtostage && this.graphicselements[i].restrict(camera, this.size);
+
                 for (var j = i + 1; j < this.graphicselements.length; j++) {
                     if (Physics.Collider.rectangles(this.graphicselements[i].collisionBox(camera), this.graphicselements[j].collisionBox(camera))) {
                         this.graphicselements[i].collide(context, this.graphicselements[j]);
@@ -902,18 +948,21 @@ var Graphics = function () {
 
     function Graphics(context) {
         var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+        var size = arguments[2];
 
         _classCallCheck(this, Graphics);
 
         this.context = this.c = context;
         this.options = Object.assign(Graphics.defaultOptions(), options);
+        this.size = size;
         this.camera = new Camera(options.origin.x, options.origin.y, context.width, context.height, options.verticalModifier);
+        this.camera.setLimits(this.size);
 
         this.layers = [];
-        this.fixedLayer = new GraphicLayer(-1);
+        this.fixedLayer = new GraphicLayer(-1, size);
 
         for (var i = 0; i < options.layers; i++) {
-            this.layers.push(new GraphicLayer(i));
+            this.layers.push(new GraphicLayer(i, size));
         }
     }
 
@@ -938,6 +987,8 @@ var Graphics = function () {
         value: function addElement(layerid, elementid, element) {
             element.id = elementid;
             this.layers[layerid].addElement(elementid, element);
+
+            return element;
         }
     }, {
         key: 'update',
@@ -1390,13 +1441,27 @@ var Sprite = function () {
         _classCallCheck(this, Sprite);
 
         this.options = options;
+
         this.state = options.state || "neutral";
-        this.initialstate = this.state;
-        this.spritesets = options.spritesets || {};
         this.facing = options.facing || "right";
+        this.initialstate = this.state;
+        this.pattern = options.pattern;
+        this.spritesets = {};
+
+        for (var name in options.spritesets || {}) {
+            this.addState(name, options.spritesets[name]);
+        }
     }
 
     _createClass(Sprite, [{
+        key: 'createPattern',
+        value: function createPattern(context, size) {
+            this.pattern = true;
+            for (var name in this.spritesets) {
+                this.spritesets[name].createPattern(context, size);
+            }
+        }
+    }, {
         key: 'addState',
         value: function addState(statename, spriteset) {
             this.spritesets[statename] = spriteset;
@@ -1424,8 +1489,8 @@ var Sprite = function () {
     }, {
         key: 'draw',
         value: function draw(context, x, y, w, h) {
-            context.save();
             var pos = void 0;
+            context.save();
             if (this.facing == "right") {
                 if (this.useimagesize) {
                     pos = this.currentState.draw(context, x, y);
@@ -1466,6 +1531,7 @@ function _classCallCheck(instance, Constructor) { if (!(instance instanceof Cons
 
 var log = require('./log');
 var Physics = require('./physics');
+var DOM = require('./dom');
 
 var SpriteState = function SpriteState(bitmap, index) {
     _classCallCheck(this, SpriteState);
@@ -1487,6 +1553,8 @@ var SpriteSet = function () {
         this.totalstates = totalstates || 1;
         this.noloop = noloop;
         this.states = [];
+        this.patterns = [];
+        this.pattern = false;
 
         log('SpriteSet', 'Creating new Sprite Set from ' + this.url + ' with ' + this.totalstates + ' states');
         if (type === "singleimage") {
@@ -1545,6 +1613,8 @@ var SpriteSet = function () {
                 var imageIndex = -1;
                 var loadNextImage = function loadNextImage() {
                     if (++imageIndex == _this.totalstates) {
+                        _this.onready && _this.onready();
+
                         _this.ready = true;
                         log('SpriteSet', 'Done loading states for SpriteSet with url ' + _this.url);
 
@@ -1561,6 +1631,39 @@ var SpriteSet = function () {
             }
         }
     }, {
+        key: 'createPattern',
+        value: function createPattern(context, imagesize) {
+            var _this2 = this;
+
+            this.pattern = true;
+
+            var actuallyCreatePattern = function actuallyCreatePattern() {
+                _this2.states.forEach(function (state) {
+                    var offCanvas = DOM.create({ node: "canvas" });
+                    if (!imagesize) {
+                        imagesize = new Physics.Vector2D(state.width, state.height);
+                    }
+
+                    offCanvas.width = imagesize.x;
+                    offCanvas.height = imagesize.y;
+                    offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
+
+                    _this2.patterns.push({
+                        pattern: context.createPattern(offCanvas, "repeat"),
+                        canvas: offCanvas
+                    });
+                });
+
+                log('SpriteSet', 'Loaded pattern for ' + _this2.states.length + " states");
+            };
+
+            if (this.ready) {
+                actuallyCreatePattern();
+            } else {
+                this.onready = actuallyCreatePattern;
+            }
+        }
+    }, {
         key: 'draw',
         value: function draw(context, x, y, w, h) {
             if (!this.ready) {
@@ -1571,7 +1674,12 @@ var SpriteSet = function () {
             y = y || 0;
             w = w || this.currentFrame.width;
             h = h || this.currentFrame.height;
-            context.drawImage(this.currentFrame, x, y, w, h);
+            if (this.pattern) {
+                context.fillStyle = this.currentPattern.pattern;
+                context.fillRect(x, y, w, h);
+            } else {
+                context.drawImage(this.currentFrame, x, y, w, h);
+            }
             this.drew++;
             if (this.framestateupdate && this.drew == this.framestateupdate) {
                 this.drew = 0;
@@ -1582,11 +1690,21 @@ var SpriteSet = function () {
         }
     }, {
         key: 'destroy',
-        value: function destroy() {}
+        value: function destroy() {
+            this.patterns.forEach(function (pat) {
+                pat.canvas.remove();
+                pat.pattern = undefined; // Not sure if necessary
+            });
+        }
     }, {
         key: 'currentFrame',
         get: function get() {
             return this.states[this.frame];
+        }
+    }, {
+        key: 'currentPattern',
+        get: function get() {
+            return this.patterns[this.frame];
         }
     }]);
 
@@ -1595,7 +1713,7 @@ var SpriteSet = function () {
 
 module.exports = SpriteSet;
 
-},{"./log":9,"./physics":11}],14:[function(require,module,exports){
+},{"./dom":4,"./log":9,"./physics":11}],14:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1708,7 +1826,7 @@ var Stage = function () {
         this.options = Object.assign(Stage.defaultOptions(), options);
         this.context = context;
 
-        this.graphics = new Graphics(this.context, this.options);
+        this.graphics = new Graphics(this.context, this.options, this.options.size);
     }
 
     _createClass(Stage, [{
@@ -1732,6 +1850,23 @@ var Stage = function () {
         value: function draw() {
             this.graphics.clear();
             this.graphics.draw();
+        }
+
+        // Shortcut
+
+    }, {
+        key: 'addElement',
+        value: function addElement() {
+            var _graphics;
+
+            return (_graphics = this.graphics).addElement.apply(_graphics, arguments);
+        }
+    }, {
+        key: 'follow',
+        value: function follow() {
+            var _graphics$camera;
+
+            return (_graphics$camera = this.graphics.camera).follow.apply(_graphics$camera, arguments);
         }
     }]);
 

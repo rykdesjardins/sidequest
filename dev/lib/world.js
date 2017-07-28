@@ -76,7 +76,7 @@ class Stage {
         this.options = Object.assign(Stage.defaultOptions(), options);
         this.context = context;
 
-        this.graphics = new Graphics(this.context, this.options);
+        this.graphics = new Graphics(this.context, this.options, this.options.size);
     }
 
     fire(event, extra) {
@@ -96,6 +96,10 @@ class Stage {
         this.graphics.clear();
         this.graphics.draw();
     }
+
+    // Shortcut
+    addElement() { return this.graphics.addElement(...arguments); }
+    follow() { return this.graphics.camera.follow(...arguments); }
 }
 
 module.exports = World;

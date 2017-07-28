@@ -18,7 +18,8 @@ class GraphicElement {
             gravity : 0, maxgravity : 0, jumpheight : 0,
 
             strength : 500,
-            controlled : false,
+            controlled : false, fixedtostage : false,
+            pattern : false, patternsize : undefined,
 
             override : {}
         };
@@ -111,6 +112,10 @@ class GraphicElement {
             useimagesize : this.options.useimagesize
         });
 
+        if (this.options.pattern) {
+            this.sprite.createPattern(this.game.context, this.options.patternsize);
+        }
+
         log('GElement', "Initialized Graphic Element with image at " + this.url);
     }
 
@@ -164,6 +169,23 @@ class GraphicElement {
             [this.vector.x + this.collision.x, this.vector.y + this.collision.y + this.collision.h],
             [this.vector.x + this.collision.x + this.collision.w, this.vector.y + this.collision.y + this.collision.h]
         ]
+    }
+
+    restrict(camera, size) {
+        if (this.vector.x + this.collision.x < 0) {
+            this.vector.x = -this.collision.x;
+            this.vector.velx = 0;
+            this.vector.accelx = 0;
+        } else if (this.vector.x + this.collision.x + this.collision.w > size.x) {
+            this.vector.x = size.x - this.collision.x - this.collision.w;
+            this.vector.velx = 0;
+            this.vector.accelx = 0;
+        } 
+
+        if (-(this.vector.y + this.collision.y) > size.y - camera.rect.h) {
+            this.vector.y = -(size.y - camera.rect.h) - this.collision.y;
+            this.vector.vely = 0;
+        }
     }
 
     collide(context, gelement) {
@@ -347,7 +369,7 @@ class GraphicElement {
         }
     }
 
-    giveupControll() {
+    giveupControl() {
         keyboard.killKey('left', this.keventleft );
         keyboard.killKey('right',this.keventright);
         keyboard.killKey('up',   this.keventup   );
@@ -359,7 +381,7 @@ class GraphicElement {
         this.imagebitmap && this.imagebitmap.close();
         this.image && this.image.remove();
         if (this.controlled) {
-            this.giveupControll();
+            this.giveupControl();
         }
     }
 }

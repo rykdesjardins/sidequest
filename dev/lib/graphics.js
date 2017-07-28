@@ -3,8 +3,9 @@ const Camera = require('./camera');
 const Physics = require('./physics');
 
 class GraphicLayer {
-    constructor(index) {
+    constructor(index, size) {
         this.index = index;
+        this.size = size;
 
         this.graphicselements = [];
         this._assocGE = {};
@@ -28,6 +29,8 @@ class GraphicLayer {
 
     impactCheck(context, camera) {
         for (let i = 0; i < this.graphicselements.length; i++) {
+            this.graphicselements[i].options.fixedtostage && this.graphicselements[i].restrict(camera, this.size);
+
             for (let j = i+1; j < this.graphicselements.length; j++) {
                 if (Physics.Collider.rectangles(
                         this.graphicselements[i].collisionBox(camera),
@@ -65,16 +68,18 @@ class Graphics {
         };
     }
 
-    constructor(context, options = {}) {
+    constructor(context, options = {}, size) {
         this.context = this.c = context;
         this.options = Object.assign(Graphics.defaultOptions(), options);
+        this.size = size;
         this.camera = new Camera(options.origin.x, options.origin.y, context.width, context.height, options.verticalModifier);
+        this.camera.setLimits(this.size);
 
         this.layers = [];
-        this.fixedLayer = new GraphicLayer(-1);
+        this.fixedLayer = new GraphicLayer(-1, size);
 
         for (let i = 0; i < options.layers; i++) {
-            this.layers.push(new GraphicLayer(i));
+            this.layers.push(new GraphicLayer(i, size));
         }
     }
 
@@ -93,6 +98,8 @@ class Graphics {
     addElement(layerid, elementid, element) {
         element.id = elementid;
         this.layers[layerid].addElement(elementid, element);
+
+        return element;
     }
 
     update() {

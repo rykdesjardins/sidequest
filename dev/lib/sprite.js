@@ -4,10 +4,23 @@ const Physics = require('./physics');
 class Sprite {
     constructor(options = {}) {
         this.options = options;
+
         this.state = options.state || "neutral";
-        this.initialstate = this.state;
-        this.spritesets = options.spritesets || {};
         this.facing = options.facing || "right";
+        this.initialstate = this.state;
+        this.pattern = options.pattern;
+        this.spritesets = {};
+
+        for (let name in options.spritesets || {}) {
+            this.addState(name, options.spritesets[name]);
+        }
+    }
+
+    createPattern(context, size) {
+        this.pattern = true;
+        for (let name in this.spritesets) {
+            this.spritesets[name].createPattern(context, size);
+        }
     }
 
     addState(statename, spriteset) {
@@ -37,8 +50,8 @@ class Sprite {
     }
 
     draw(context, x, y, w, h) {
-        context.save();
         let pos;
+        context.save();
         if (this.facing == "right") {
             if (this.useimagesize) {
                 pos = this.currentState.draw(context, x, y);
@@ -55,7 +68,7 @@ class Sprite {
             pos.x = x;
         }
         context.restore();
-        
+
         return pos;
     }
 }
