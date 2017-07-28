@@ -3,28 +3,32 @@
     <head>
 
     </head>
-    <body>
+    <body style="padding : 0; margin : 0;">
         <canvas id="gamecontainer"></canvas>
 
         <script src="//localhost:8088/build/compiled.js"></script>
         <script>
-            var game = new SideQuest.Game("gamecontainer", {env : "dev"});
+            var game = new SideQuest.Game("gamecontainer", {env : "dev", width : 1200, height : 640});
             var stage = game.world.createStage("mainstage", {}, false, true);
             var h = game.height;
-            var w = game.width;
 
             SideQuest.GraphicElement.createTemplate('brick', "image", { url : "/brick.jpg", w : 64, h : 64, strength : 2000 });
             SideQuest.GraphicElement.createTemplate('cloud', "image", { url : "/cloud.png", useimagesize : true}, {opacity:0.6});
             
             stage.graphics.addElement(0, 'c1', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 40,  y : 20 } ));
-            stage.graphics.addElement(4, 'c2', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 160, y : 80 } ));
+            stage.graphics.addElement(3, 'c2', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 160, y : 80 } ));
             stage.graphics.addElement(0, 'c3', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 540, y : 40 } ));
+            stage.graphics.addElement(3, 'c4', SideQuest.GraphicElement.fromTemplate(game, 'cloud',  { x : 440, y : -140 } ));
 
             stage.graphics.addElement(2, 'b1', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 400, y : h - 64  }));
             stage.graphics.addElement(2, 'b2', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 580, y : h - 164 }));
             stage.graphics.addElement(2, 'b3', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 760, y : h - 264 }));
             stage.graphics.addElement(2, 'b4', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 580, y : h - 364 }));
             stage.graphics.addElement(2, 'b5', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 350, y : h - 364 }));
+            stage.graphics.addElement(2, 'b6', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 250, y : h - 464 }));
+            stage.graphics.addElement(2, 'b7', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 150, y : h - 564 }));
+            stage.graphics.addElement(2, 'b8', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 280, y : h - 664 }));
+            stage.graphics.addElement(2, 'b9', SideQuest.GraphicElement.fromTemplate(game, "brick", { x : 600, y : h - 664 }));
 
             var player = new SideQuest.GraphicElement(game, "sprite", {
                 x : 20, y : 20, 
@@ -39,9 +43,9 @@
                 sprite : new SideQuest.Sprite({
                     spritesets : {
                         neutral : new SideQuest.SpriteSet('fileset', '/char/Idle ($).png', 10, 4),
-                        running : new SideQuest.SpriteSet('fileset', '/char/Run ($).png', 8, 4),
-                        jumping : new SideQuest.SpriteSet('fileset', '/char/Jump ($).png', 8, 3, true),
-                        falling : new SideQuest.SpriteSet('fileset', '/char/Fall ($).png', 8, 3, true)
+                        running : new SideQuest.SpriteSet('fileset', '/char/Run ($).png',  8,  4),
+                        jumping : new SideQuest.SpriteSet('fileset', '/char/Jump ($).png', 8,  3, true),
+                        falling : new SideQuest.SpriteSet('fileset', '/char/Fall ($).png', 8,  3, true)
                     }
                 })
             });

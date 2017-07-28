@@ -68,7 +68,7 @@ class Graphics {
     constructor(context, options = {}) {
         this.context = this.c = context;
         this.options = Object.assign(Graphics.defaultOptions(), options);
-        this.camera = new Camera(context.width, context.height);
+        this.camera = new Camera(options.origin.x, options.origin.y, context.width, context.height, options.verticalModifier);
 
         this.layers = [];
         this.fixedLayer = new GraphicLayer(-1);

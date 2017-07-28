@@ -2,8 +2,11 @@ const log = require('./log');
 const Physics = require('./physics');
 
 class Camera {
-    constructor(w, h) {
+    constructor(ox, oy, w, h, vmod) {
         this.rect = new Physics.Rect(0, 0, w, h);
+        this.origin = new Physics.Vector2D(ox, oy);
+        this.vmod = vmod; 
+
         this.following;
         this.locked = false;
     }

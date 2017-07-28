@@ -50,11 +50,9 @@ var Game = function () {
         this.keyboard = new Keyboard(this.canvas);
         this.world = new World(this.context, this.options.world);
 
-        if (this.options.env == "dev") {
-            glob.__SIDESCROLLGAME.env == "dev";
+        if (this.options.env === "dev") {
+            this.dev = true;
             this.gamedebugger.cast();
-        } else {
-            glob.__SIDESCROLLGAME.env == this.options.env || "prod";
         }
 
         this.timing = {
@@ -64,28 +62,21 @@ var Game = function () {
             framerate: 1000 / this.options.fps
         };
 
-        this.arrangeBody();
+        this.width = this.options.width || this.canvas.style.width || this.canvas.width || glob.innerWidth;
+        this.height = this.options.height || this.canvas.style.height || this.canvas.height || glob.innerHeight;
+
         this.bindResize();
         this.resize();
     }
 
     _createClass(Game, [{
-        key: 'arrangeBody',
-        value: function arrangeBody() {
-            document.body.style.margin = 0;
-            document.body.style.padding = 0;
-        }
-    }, {
         key: 'resize',
         value: function resize() {
-            var width = glob.innerWidth;
-            var height = glob.innerHeight - (this.gamedebugger.init ? 200 : 0);
+            var width = this.width;
+            var height = this.height;
 
             this.canvas.width = width;
             this.canvas.height = height;
-
-            this.width = width;
-            this.height = height;
 
             this.world.resize(width, height);
             log("Game", 'Handled resized at ' + width + ' x ' + height);
@@ -159,10 +150,13 @@ var log = require('./log');
 var Physics = require('./physics');
 
 var Camera = function () {
-    function Camera(w, h) {
+    function Camera(ox, oy, w, h, vmod) {
         _classCallCheck(this, Camera);
 
         this.rect = new Physics.Rect(0, 0, w, h);
+        this.origin = new Physics.Vector2D(ox, oy);
+        this.vmod = vmod;
+
         this.following;
         this.locked = false;
     }
@@ -657,7 +651,7 @@ var GraphicElement = function () {
             var drawn = false;
             if (this.shouldBeDrawn(camera)) {
                 context.globalAlpha = this.effects.opacity;
-                var pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
+                var pos = this.sprite.draw(context, camera.origin.x + this.vector.x - camera.rect.x, camera.origin.y + this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
                 context.globalAlpha = 1;
 
                 drawn = !!pos;
@@ -667,7 +661,7 @@ var GraphicElement = function () {
                 }
             }
 
-            if (this.game.options.env == "dev") {
+            if (this.game.dev) {
                 this.debug(context, camera, drawn);
             }
 
@@ -913,7 +907,7 @@ var Graphics = function () {
 
         this.context = this.c = context;
         this.options = Object.assign(Graphics.defaultOptions(), options);
-        this.camera = new Camera(context.width, context.height);
+        this.camera = new Camera(options.origin.x, options.origin.y, context.width, context.height, options.verticalModifier);
 
         this.layers = [];
         this.fixedLayer = new GraphicLayer(-1);
@@ -1697,6 +1691,8 @@ var Stage = function () {
         value: function defaultOptions() {
             return {
                 size: new Physics.Vector2D(1920, 1080),
+                origin: new Physics.Vector2D(0, 0),
+                verticalModifier: 1,
                 hooks: {},
                 layers: 5
             };

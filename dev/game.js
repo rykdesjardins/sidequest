@@ -34,11 +34,9 @@ class Game {
         this.keyboard = new Keyboard(this.canvas);
         this.world = new World(this.context, this.options.world);
 
-        if (this.options.env == "dev") {
-            glob.__SIDESCROLLGAME.env == "dev";
+        if (this.options.env === "dev") {
+            this.dev = true;
             this.gamedebugger.cast();
-        } else {
-            glob.__SIDESCROLLGAME.env == this.options.env || "prod";
         }
 
         this.timing = {
@@ -48,26 +46,20 @@ class Game {
             framerate : 1000 / this.options.fps
         };
 
-        this.arrangeBody();
+        this.width  = this.options.width  || this.canvas.style.width  || this.canvas.width  || glob.innerWidth;
+        this.height = this.options.height || this.canvas.style.height || this.canvas.height || glob.innerHeight;
+
         this.bindResize();
         this.resize();
     }
 
-    arrangeBody() {
-        document.body.style.margin = 0;
-        document.body.style.padding = 0;
-    }
-
     resize() {
-        const width  = glob.innerWidth;
-        const height = glob.innerHeight - (this.gamedebugger.init ? 200 : 0);
+        const width  = this.width;
+        const height = this.height;
 
         this.canvas.width  = width;
         this.canvas.height = height;       
         
-        this.width  = width;
-        this.height = height;
-
         this.world.resize(width, height);
         log("Game", `Handled resized at ${width} x ${height}`);
     }

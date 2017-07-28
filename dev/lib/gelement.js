@@ -251,7 +251,13 @@ class GraphicElement {
         let drawn = false;
         if (this.shouldBeDrawn(camera)) {
             context.globalAlpha = this.effects.opacity;
-            const pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
+            const pos = this.sprite.draw(
+                context, 
+                camera.origin.x  + this.vector.x - camera.rect.x, 
+                camera.origin.y + this.vector.y - camera.rect.y, 
+                this.rect.x, 
+                this.rect.y
+            );
             context.globalAlpha = 1;
 
             drawn = !!pos;
@@ -261,7 +267,7 @@ class GraphicElement {
             }
         }
 
-        if (this.game.options.env == "dev") {
+        if (this.game.dev) {
             this.debug(context, camera, drawn);
         }
 
