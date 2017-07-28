@@ -5,35 +5,62 @@ const Keyboard = require('./keyboard');
 const Sprite = require('./sprite');
 const SpriteSet = require('./spriteset');
 
-const defaultoptions = () => {
-    return {
-        x : 0, y : 0, w : 0, h : 0,
-        initspeed : 1,
-        maxspeed : 3,
-        gravity : 0,
-        strength : 500,
-        jumpheight : 0,
-        controlled : false,
-        useimagesize : false,
-        friction : 0.2,
-        override : {}
-    }
-};
-
-const defaulteffects = () => {
-    return { opacity : 1.0 };
-}
+const GraphicElementTemplates = {};
 
 class GraphicElement {
-    constructor(game, type, extra = {}) {
+    static defaultoptions() {
+        return {
+            x : 0, y : 0, 
+            w : 0, h : 0, 
+            useimagesize : false,
+
+            initspeed : 1, maxspeed : 3, friction : 0.2,
+            gravity : 0, maxgravity : 0, jumpheight : 0,
+
+            strength : 500,
+            controlled : false,
+
+            override : {}
+        };
+    }
+
+    static defaulteffects()  {
+        return { 
+            opacity : 1.0 
+        };
+    }
+
+    static createTemplate(id, type, options = {}, effects = {}, overwrite) {
+        if (!overwrite && GraphicElementTemplates[id]) {
+            throw new Error(`[GraphicElement] Template with id ${id} already exists`);
+        }
+
+        GraphicElementTemplates[id] = { type, options, effects };
+    }
+
+    static fromTemplate(game, id, options = {}, effects = {}) {
+        const template = GraphicElementTemplates[id];
+        if (!template) {
+            throw new Error(`[GraphicElement] Tried to initialize with undefined template : ${id}`);
+        }
+
+        return new GraphicElement(
+            game, 
+            template.type, 
+            Object.assign(template.options, options), 
+            Object.assign(template.effects, effects)
+        );
+    }
+    
+    constructor(game, type, extra = {}, effects = {}) {
         this.game = game;
         this.type = type;
-        this.options = Object.assign(defaultoptions(), extra);
+        this.options = Object.assign(GraphicElement.defaultoptions(), extra);
         this.vector = new Physics.Vector2D(this.options.x, this.options.y);
         this.rect = new Physics.Vector2D(this.options.w, this.options.h);
         this.collision = this.options.collision || new Physics.Rect(0, 0, this.rect.x, this.rect.y);
         this.strength = this.options.strength;
-        this.effects = Object.assign(defaulteffects(), {});
+        this.effects = Object.assign(GraphicElement.defaulteffects(), effects);
         this.sticked = false;
 
         this.vector.setMaxVelocity(this.options.maxspeed, this.options.maxgravity);
@@ -116,8 +143,8 @@ class GraphicElement {
             this.sprite.changeState('jumping');
             this.sticked = false;
         } else if (this.vector.vely > 0) {
-            this.sticked = false;
             this.sprite.changeState('falling');
+            this.sticked = false;
         } else if (this.vector.velx != 0) {
             this.sprite.changeState('running');
         } else {
@@ -223,7 +250,10 @@ class GraphicElement {
     draw(context, camera) {
         let drawn = false;
         if (this.shouldBeDrawn(camera)) {
+            context.globalAlpha = this.effects.opacity;
             const pos = this.sprite.draw(context, this.vector.x - camera.rect.x, this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
+            context.globalAlpha = 1;
+
             drawn = !!pos;
             if (this.options.useimagesize && pos) {
                 this.rect.x = pos.w;
