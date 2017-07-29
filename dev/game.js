@@ -10,6 +10,7 @@ const Physics = require('./lib/physics');
 const Keyboard = require('./lib/keyboard');
 const World = require('./lib/world');
 const Audio = require('./lib/audio');
+const Loader = require('./lib/loader');
 
 class Game {
     static defaults() {
@@ -31,6 +32,7 @@ class Game {
         this.options = Object.assign(Game.defaults(), options);
         this.gamedebugger = new Debugger(this.canvas);
 
+        this.loader = new Loader();
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
         this.audio = new Audio(this.options.audiochannels);
@@ -99,6 +101,16 @@ class Game {
 
         this.frameRequest = requestAnimationFrame((time) => {this.draw(time)});
         return this;
+    }
+
+    loadFromRemote(type, source, done) {
+        switch (type) {
+            case "stage":
+                this.loader.loadStage(source, this, done); break;
+
+            case "world":
+                this.loader.loadWorld(source, this, done); break;
+        }
     }
 
     // Shortcut

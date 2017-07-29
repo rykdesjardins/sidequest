@@ -1,6 +1,7 @@
 const log = require('./log');
 const Physics = require('./physics');
 const DOM = require('./dom');
+const Drawable = require('./abstract/drawable');
 
 class SpriteState {
     constructor(bitmap, index) {
@@ -9,8 +10,10 @@ class SpriteState {
     }
 }
 
-class SpriteSet {
+class SpriteSet extends Drawable {
     constructor(type, urlscheme, totalstates, framestateupdate, noloop) {
+        super();
+
         this.type = type;
         this.url = urlscheme;
         this.frame = 0;

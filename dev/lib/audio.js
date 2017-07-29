@@ -1,4 +1,5 @@
 const log = require('./log');
+const Loader = require('./loader');
 
 const AUDIO_RAW = { };
 
@@ -37,6 +38,7 @@ class AudioChannel {
 class Audio {
     constructor(totalchannel = 4) {
         this.totalchannel = totalchannel;
+        this.loader = new Loader();
         this.channels = [];
 
         for (let i = 0; i < this.totalchannel; i++) {
@@ -50,17 +52,7 @@ class Audio {
         }
 
         AUDIO_RAW[id] = new Sound();
-
-        var request = new XMLHttpRequest();
-        request.open('GET', filename, true);
-        request.responseType = 'arraybuffer';
-
-        request.onload = function() {
-            AUDIO_RAW[id].setBuffer(request.response);
-            AUDIO_RAW[id].onready && AUDIO_RAW[id].onready();
-            done && done();
-        }
-        request.send();
+        this.loader.loadAudio(filename, AUDIO_RAW[id], done);
 
         return AUDIO_RAW[id];
     }
@@ -72,8 +64,9 @@ class Audio {
         }
 
         if (!AUDIO_RAW[id].ready) {
-            log('Audio', 'Song with id ' + id + ' will play once it\' loaded');
+            log('Audio', 'Song with id ' + id + ' will play once it\'s loaded');
             AUDIO_RAW[id].onready = () => {
+                log('Audio', 'Song with id ' + id + ' will now play automatically');
                 this.channels[channel].play(id, time, loop);
             };
             return false;

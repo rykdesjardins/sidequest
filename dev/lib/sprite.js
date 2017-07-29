@@ -1,8 +1,11 @@
 const log = require('./log');
 const Physics = require('./physics');
+const Drawable = require('./abstract/drawable');
 
-class Sprite {
+class Sprite extends Drawable {
     constructor(options = {}) {
+        super(options);
+
         this.options = options;
 
         this.state = options.state || "neutral";
