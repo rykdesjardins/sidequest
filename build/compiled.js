@@ -17,6 +17,7 @@ var Physics = require('./lib/physics');
 var Keyboard = require('./lib/keyboard');
 var World = require('./lib/world');
 var Audio = require('./lib/audio');
+var Loader = require('./lib/loader');
 
 var Game = function () {
     _createClass(Game, null, [{
@@ -47,6 +48,7 @@ var Game = function () {
         this.options = Object.assign(Game.defaults(), options);
         this.gamedebugger = new Debugger(this.canvas);
 
+        this.loader = new Loader();
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
         this.audio = new Audio(this.options.audiochannels);
@@ -134,6 +136,17 @@ var Game = function () {
             });
             return this;
         }
+    }, {
+        key: 'loadFromRemote',
+        value: function loadFromRemote(type, source, done) {
+            switch (type) {
+                case "stage":
+                    this.loader.loadStage(source, this, done);break;
+
+                case "world":
+                    this.loader.loadWorld(source, this, done);break;
+            }
+        }
 
         // Shortcut
 
@@ -151,7 +164,102 @@ var Game = function () {
 
 glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics, Keyboard: Keyboard, Mouse: Mouse, World: World, Audio: Audio, log: log };
 
-},{"./lib/audio":2,"./lib/debugger":4,"./lib/gelement":6,"./lib/glob":7,"./lib/graphics":8,"./lib/keyboard":9,"./lib/log":10,"./lib/mouse":11,"./lib/physics":12,"./lib/sprite":13,"./lib/spriteset":14,"./lib/world":15}],2:[function(require,module,exports){
+},{"./lib/audio":4,"./lib/debugger":6,"./lib/gelement":8,"./lib/glob":9,"./lib/graphics":10,"./lib/keyboard":11,"./lib/loader":12,"./lib/log":13,"./lib/mouse":14,"./lib/physics":15,"./lib/sprite":16,"./lib/spriteset":17,"./lib/world":18}],2:[function(require,module,exports){
+"use strict";
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var Drawable = function () {
+    function Drawable() {
+        _classCallCheck(this, Drawable);
+
+        this.hooks = {
+            collide: []
+        };
+
+        this.state = "neutral";
+        this.facing = "right";
+        this.initialstate = this.state;
+    }
+
+    _createClass(Drawable, [{
+        key: "draw",
+        value: function draw(context, x, y, w, h) {
+            return { x: x, y: y, w: w, h: h };
+        }
+    }, {
+        key: "on",
+        value: function on(hookname, callback) {
+            if (!this.hooks[hookname]) {
+                this.hooks[hookname] = [];
+            }
+
+            this.hooks[hookname].push(callback);
+        }
+    }, {
+        key: "collide",
+        value: function collide(gelement, direction) {
+            var _this = this;
+
+            var defaultCollision = true;
+            this.hooks.collide.forEach(function (callback) {
+                if (!callback(_this, gelement, direction)) {
+                    defaultCollision = false;
+                }
+            });
+
+            return defaultCollision;
+        }
+    }, {
+        key: "addState",
+        value: function addState() {}
+    }, {
+        key: "changeState",
+        value: function changeState() {}
+    }, {
+        key: "updateState",
+        value: function updateState() {}
+    }, {
+        key: "currentState",
+        get: function get() {
+            return this.state;
+        }
+    }]);
+
+    return Drawable;
+}();
+
+module.exports = Drawable;
+
+},{}],3:[function(require,module,exports){
+'use strict';
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
+var Drawable = require('./abstract/drawable');
+var Physics = require('./physics');
+
+var Area = function (_Drawable) {
+    _inherits(Area, _Drawable);
+
+    function Area() {
+        _classCallCheck(this, Area);
+
+        return _possibleConstructorReturn(this, (Area.__proto__ || Object.getPrototypeOf(Area)).call(this));
+    }
+
+    return Area;
+}(Drawable);
+
+module.exports = Area;
+
+},{"./abstract/drawable":2,"./physics":15}],4:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -159,6 +267,7 @@ var _createClass = function () { function defineProperties(target, props) { for 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var log = require('./log');
+var Loader = require('./loader');
 
 var AUDIO_RAW = {};
 
@@ -221,6 +330,7 @@ var Audio = function () {
         _classCallCheck(this, Audio);
 
         this.totalchannel = totalchannel;
+        this.loader = new Loader();
         this.channels = [];
 
         for (var i = 0; i < this.totalchannel; i++) {
@@ -236,17 +346,7 @@ var Audio = function () {
             }
 
             AUDIO_RAW[id] = new Sound();
-
-            var request = new XMLHttpRequest();
-            request.open('GET', filename, true);
-            request.responseType = 'arraybuffer';
-
-            request.onload = function () {
-                AUDIO_RAW[id].setBuffer(request.response);
-                AUDIO_RAW[id].onready && AUDIO_RAW[id].onready();
-                done && done();
-            };
-            request.send();
+            this.loader.loadAudio(filename, AUDIO_RAW[id], done);
 
             return AUDIO_RAW[id];
         }
@@ -266,8 +366,9 @@ var Audio = function () {
             }
 
             if (!AUDIO_RAW[id].ready) {
-                log('Audio', 'Song with id ' + id + ' will play once it\' loaded');
+                log('Audio', 'Song with id ' + id + ' will play once it\'s loaded');
                 AUDIO_RAW[id].onready = function () {
+                    log('Audio', 'Song with id ' + id + ' will now play automatically');
                     _this2.channels[channel].play(id, time, loop);
                 };
                 return false;
@@ -287,7 +388,7 @@ var Audio = function () {
 
 module.exports = Audio;
 
-},{"./log":10}],3:[function(require,module,exports){
+},{"./loader":12,"./log":13}],5:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -380,7 +481,7 @@ var Camera = function () {
 
 module.exports = Camera;
 
-},{"./log":10,"./physics":12}],4:[function(require,module,exports){
+},{"./log":13,"./physics":15}],6:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -492,7 +593,7 @@ var GameDebugger = function () {
 
 module.exports = GameDebugger;
 
-},{"./dom":5,"./glob":7,"./log":10}],5:[function(require,module,exports){
+},{"./dom":7,"./glob":9,"./log":13}],7:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -558,7 +659,7 @@ var DOMHelper = function () {
 
 module.exports = new DOMHelper();
 
-},{}],6:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -571,8 +672,11 @@ var Physics = require('./physics');
 var Keyboard = require('./keyboard');
 var Sprite = require('./sprite');
 var SpriteSet = require('./spriteset');
+var Area = require('./area');
 
 var GraphicElementTemplates = {};
+
+var CollisionMatrixDirections = ["right", "top", "left", "top", "left", "bottom", "right", "bottom"];
 
 var GraphicElement = function () {
     _createClass(GraphicElement, null, [{
@@ -658,6 +762,10 @@ var GraphicElement = function () {
                 this.initSprite();
                 break;
 
+            case "area":
+                this.initArea();
+                break;
+
             // TODO : Handle vector shapes
             case "shape":
                 this.initShape(extra);
@@ -678,14 +786,14 @@ var GraphicElement = function () {
     }, {
         key: 'initSprite',
         value: function initSprite() {
-            this.sprite = this.options.sprite;
+            this.drawable = this.options.sprite;
         }
     }, {
         key: 'initImage',
         value: function initImage() {
             this.url = this.options.url;
 
-            this.sprite = new Sprite({
+            this.drawable = new Sprite({
                 spritesets: {
                     neutral: new SpriteSet('file', this.url)
                 },
@@ -693,10 +801,16 @@ var GraphicElement = function () {
             });
 
             if (this.options.pattern) {
-                this.sprite.createPattern(this.game.context, this.options.patternsize);
+                this.drawable.createPattern(this.game.context, this.options.patternsize);
             }
 
             log('GElement', "Initialized Graphic Element with image at " + this.url);
+        }
+    }, {
+        key: 'initArea',
+        value: function initArea() {
+            this.drawable = new Area();
+            log('Gelement', 'Initialized Graphic Element with an area');
         }
     }, {
         key: 'applyGravity',
@@ -728,16 +842,21 @@ var GraphicElement = function () {
         key: 'updateState',
         value: function updateState() {
             if (this.vector.vely < 0) {
-                this.sprite.changeState('jumping');
+                this.drawable.changeState('jumping');
                 this.sticked = false;
             } else if (this.vector.vely > 0) {
-                this.sprite.changeState('falling');
+                this.drawable.changeState('falling');
                 this.sticked = false;
             } else if (this.vector.velx != 0) {
-                this.sprite.changeState('running');
+                this.drawable.changeState('running');
             } else {
-                this.sprite.changeState('neutral');
+                this.drawable.changeState('neutral');
             }
+        }
+    }, {
+        key: 'on',
+        value: function on(eventname, callback) {
+            this.drawable.on(eventname, callback);
         }
     }, {
         key: 'shouldBeDrawn',
@@ -779,17 +898,19 @@ var GraphicElement = function () {
                     }
                 }
 
-                if (smallindex % 2 == 0) {
-                    this.vector.velx = 0;
-                    this.vector.accelx = 0;
-                    this.vector.x -= C[smallindex];
-                } else {
-                    if (this.vector.vely > 0) {
-                        this.sticked = true;
-                    }
+                if (this.drawable.collide(gelement, CollisionMatrixDirections[smallindex])) {
+                    if (smallindex % 2 == 0) {
+                        this.vector.velx = 0;
+                        this.vector.accelx = 0;
+                        this.vector.x -= C[smallindex];
+                    } else {
+                        if (this.vector.vely > 0) {
+                            this.sticked = true;
+                        }
 
-                    this.vector.vely = 0;
-                    this.vector.y -= C[smallindex];
+                        this.vector.vely = 0;
+                        this.vector.y -= C[smallindex];
+                    }
                 }
             }
         }
@@ -823,7 +944,7 @@ var GraphicElement = function () {
             context.fillText("Real " + (this.vector.x - camera.rect.x) + " x " + (this.vector.y - camera.rect.y), pos.x + pos.w + 5, pos.y + 24);
             context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 38);
             context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 52);
-            context.fillText("State : " + this.sprite.state + (this.controlled ? ", controlled" : ""), pos.x + pos.w + 5, pos.y + 66);
+            context.fillText("State : " + this.drawable.state + (this.controlled ? ", controlled" : ""), pos.x + pos.w + 5, pos.y + 66);
             context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
         }
     }, {
@@ -832,7 +953,7 @@ var GraphicElement = function () {
             var drawn = false;
             if (this.shouldBeDrawn(camera)) {
                 context.globalAlpha = this.effects.opacity;
-                var pos = this.sprite.draw(context, camera.origin.x + this.vector.x - camera.rect.x, camera.origin.y + this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
+                var pos = this.drawable.draw(context, camera.origin.x + this.vector.x - camera.rect.x, camera.origin.y + this.vector.y - camera.rect.y, this.rect.x, this.rect.y);
                 context.globalAlpha = 1;
 
                 drawn = !!pos;
@@ -875,7 +996,7 @@ var GraphicElement = function () {
                         this.direction = "right";
                         this.keydown = true;
                         this.vector.setAcceleration(this.options.friction, this.vector.accely);
-                        this.sprite.changeState(this.sprite.state, "right");
+                        this.drawable.changeState(this.drawable.state, "right");
                         break;
 
                     case Keyboard.KEY_LEFT:
@@ -883,7 +1004,7 @@ var GraphicElement = function () {
                         this.direction = "left";
                         this.keydown = true;
                         this.vector.setAcceleration(-this.options.friction, this.vector.accely);
-                        this.sprite.changeState(this.sprite.state, "left");
+                        this.drawable.changeState(this.drawable.state, "left");
                         break;
 
                     case Keyboard.KEY_SPACE:
@@ -903,7 +1024,7 @@ var GraphicElement = function () {
                     this.vector.setAcceleration(this.options.friction * -mod, this.vector.accely, true);
                 }
 
-                this.sprite.changeState();
+                this.drawable.changeState();
             }
         }
     }, {
@@ -958,7 +1079,7 @@ var GraphicElement = function () {
     }, {
         key: 'ready',
         get: function get() {
-            return this.sprite.currentState.ready;
+            return this.drawable.currentState.ready;
         }
     }, {
         key: 'collisionPoints',
@@ -972,7 +1093,7 @@ var GraphicElement = function () {
 
 module.exports = GraphicElement;
 
-},{"./dom":5,"./keyboard":9,"./log":10,"./physics":12,"./sprite":13,"./spriteset":14}],7:[function(require,module,exports){
+},{"./area":3,"./dom":7,"./keyboard":11,"./log":13,"./physics":15,"./sprite":16,"./spriteset":17}],9:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -986,7 +1107,7 @@ glob.__SIDESCROLLGAME = __SIDESCROLLGAME;
 module.exports = glob;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],8:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1154,7 +1275,7 @@ var Graphics = function () {
 
 module.exports = Graphics;
 
-},{"./camera":3,"./log":10,"./physics":12}],9:[function(require,module,exports){
+},{"./camera":5,"./log":13,"./physics":15}],11:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1317,7 +1438,75 @@ var Keyboard = function () {
 
 module.exports = Keyboard;
 
-},{"./glob":7,"./log":10}],10:[function(require,module,exports){
+},{"./glob":9,"./log":13}],12:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var log = require('./log');
+
+var LOADER_CACHE = {};
+
+var Loader = function () {
+    function Loader() {
+        _classCallCheck(this, Loader);
+    }
+
+    _createClass(Loader, [{
+        key: 'request',
+        value: function request(url, type, done, parsejson) {
+            if (LOADER_CACHE[url]) {
+                return done && done(LOADER_CACHE[url]);
+            }
+
+            var request = new XMLHttpRequest();
+            request.open('GET', url, true);
+            request.responseType = type;
+
+            request.onload = function () {
+                var response = request.response;
+                log('Loader', 'Loaded data with type ' + type + ' from URL ' + url);
+                LOADER_CACHE[url] = response;
+                done && done(response);
+            };
+            request.send();
+        }
+    }, {
+        key: 'loadStage',
+        value: function loadStage(url, game, done) {
+            this.request(url, "json", function (rawstage) {
+                var stage = game.world.createStageFromRaw(game, rawstage);
+                done && done(stage);
+            }, true);
+        }
+    }, {
+        key: 'loadWorld',
+        value: function loadWorld(url, game, done) {
+            this.request(url, "json", function (rawworld) {
+                game.world.appendFromRaw(game, rawworld);
+                done && done(game.world);
+            }, true);
+        }
+    }, {
+        key: 'loadAudio',
+        value: function loadAudio(url, sound, done) {
+            this.request(url, 'arraybuffer', function (data) {
+                sound.setBuffer(data);
+                sound.onready && sound.onready();
+
+                done && done(data);
+            });
+        }
+    }]);
+
+    return Loader;
+}();
+
+module.exports = Loader;
+
+},{"./log":13}],13:[function(require,module,exports){
 "use strict";
 
 var glob = require('./glob.js');
@@ -1335,7 +1524,7 @@ log.listen = function (cb) {
 
 module.exports = glob.__SIDESCROLLGAME.env == "dev" ? log : noOp;
 
-},{"./glob.js":7}],11:[function(require,module,exports){
+},{"./glob.js":9}],14:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1400,7 +1589,7 @@ var GameMouse = function () {
 
 module.exports = GameMouse;
 
-},{"./log":10,"./physics":12}],12:[function(require,module,exports){
+},{"./log":13,"./physics":15}],15:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1562,33 +1751,43 @@ var Collider = function () {
 
 module.exports = { Vector2D: Vector2D, Rect: Rect, Collider: Collider };
 
-},{}],13:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
+
 var log = require('./log');
 var Physics = require('./physics');
+var Drawable = require('./abstract/drawable');
 
-var Sprite = function () {
+var Sprite = function (_Drawable) {
+    _inherits(Sprite, _Drawable);
+
     function Sprite() {
         var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
         _classCallCheck(this, Sprite);
 
-        this.options = options;
+        var _this = _possibleConstructorReturn(this, (Sprite.__proto__ || Object.getPrototypeOf(Sprite)).call(this, options));
 
-        this.state = options.state || "neutral";
-        this.facing = options.facing || "right";
-        this.initialstate = this.state;
-        this.pattern = options.pattern;
-        this.spritesets = {};
+        _this.options = options;
+
+        _this.state = options.state || "neutral";
+        _this.facing = options.facing || "right";
+        _this.initialstate = _this.state;
+        _this.pattern = options.pattern;
+        _this.spritesets = {};
 
         for (var name in options.spritesets || {}) {
-            this.addState(name, options.spritesets[name]);
+            _this.addState(name, options.spritesets[name]);
         }
+        return _this;
     }
 
     _createClass(Sprite, [{
@@ -1656,20 +1855,25 @@ var Sprite = function () {
     }]);
 
     return Sprite;
-}();
+}(Drawable);
 
 module.exports = Sprite;
 
-},{"./log":10,"./physics":12}],14:[function(require,module,exports){
+},{"./abstract/drawable":2,"./log":13,"./physics":15}],17:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
+
+function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var log = require('./log');
 var Physics = require('./physics');
 var DOM = require('./dom');
+var Drawable = require('./abstract/drawable');
 
 var SpriteState = function SpriteState(bitmap, index) {
     _classCallCheck(this, SpriteState);
@@ -1678,32 +1882,37 @@ var SpriteState = function SpriteState(bitmap, index) {
     this.index = index;
 };
 
-var SpriteSet = function () {
+var SpriteSet = function (_Drawable) {
+    _inherits(SpriteSet, _Drawable);
+
     function SpriteSet(type, urlscheme, totalstates, framestateupdate, noloop) {
         _classCallCheck(this, SpriteSet);
 
-        this.type = type;
-        this.url = urlscheme;
-        this.frame = 0;
-        this.framestateupdate = framestateupdate || false;
-        this.drew = 0;
-        this.ready = false;
-        this.totalstates = totalstates || 1;
-        this.noloop = noloop;
-        this.states = [];
-        this.patterns = [];
-        this.pattern = false;
+        var _this = _possibleConstructorReturn(this, (SpriteSet.__proto__ || Object.getPrototypeOf(SpriteSet)).call(this));
 
-        log('SpriteSet', 'Creating new Sprite Set from ' + this.url + ' with ' + this.totalstates + ' states');
+        _this.type = type;
+        _this.url = urlscheme;
+        _this.frame = 0;
+        _this.framestateupdate = framestateupdate || false;
+        _this.drew = 0;
+        _this.ready = false;
+        _this.totalstates = totalstates || 1;
+        _this.noloop = noloop;
+        _this.states = [];
+        _this.patterns = [];
+        _this.pattern = false;
+
+        log('SpriteSet', 'Creating new Sprite Set from ' + _this.url + ' with ' + _this.totalstates + ' states');
         if (type === "singleimage") {
             // TODO : Handle multiple states in single image
         } else if (type === "file") {
-            this.load();
+            _this.load();
         } else if (type === "fileset") {
-            this.load();
+            _this.load();
         } else {
             throw new Error("Created a SpriteSet with an invalid type : " + type);
         }
+        return _this;
     }
 
     _createClass(SpriteSet, [{
@@ -1742,7 +1951,7 @@ var SpriteSet = function () {
     }, {
         key: 'load',
         value: function load(done) {
-            var _this = this;
+            var _this2 = this;
 
             if (this.type == "singleimage") {
                 // TODO : Handle loading states from one image
@@ -1750,17 +1959,17 @@ var SpriteSet = function () {
                 log('SpriteSet', 'Loading states from url scheme ' + this.url);
                 var imageIndex = -1;
                 var loadNextImage = function loadNextImage() {
-                    if (++imageIndex == _this.totalstates) {
-                        _this.onready && _this.onready();
+                    if (++imageIndex == _this2.totalstates) {
+                        _this2.onready && _this2.onready();
 
-                        _this.ready = true;
-                        log('SpriteSet', 'Done loading states for SpriteSet with url ' + _this.url);
+                        _this2.ready = true;
+                        log('SpriteSet', 'Done loading states for SpriteSet with url ' + _this2.url);
 
                         return done && done();
                     }
 
-                    _this.getImageFromURL(_this.url.replace('$', imageIndex + 1), function (bitmap) {
-                        _this.states.push(bitmap);
+                    _this2.getImageFromURL(_this2.url.replace('$', imageIndex + 1), function (bitmap) {
+                        _this2.states.push(bitmap);
                         loadNextImage();
                     });
                 };
@@ -1771,12 +1980,12 @@ var SpriteSet = function () {
     }, {
         key: 'createPattern',
         value: function createPattern(context, imagesize) {
-            var _this2 = this;
+            var _this3 = this;
 
             this.pattern = true;
 
             var actuallyCreatePattern = function actuallyCreatePattern() {
-                _this2.states.forEach(function (state) {
+                _this3.states.forEach(function (state) {
                     var offCanvas = DOM.create({ node: "canvas" });
                     if (!imagesize) {
                         imagesize = new Physics.Vector2D(state.width, state.height);
@@ -1786,13 +1995,13 @@ var SpriteSet = function () {
                     offCanvas.height = imagesize.y;
                     offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
 
-                    _this2.patterns.push({
+                    _this3.patterns.push({
                         pattern: context.createPattern(offCanvas, "repeat"),
                         canvas: offCanvas
                     });
                 });
 
-                log('SpriteSet', 'Loaded pattern for ' + _this2.states.length + " states");
+                log('SpriteSet', 'Loaded pattern for ' + _this3.states.length + " states");
             };
 
             if (this.ready) {
@@ -1847,20 +2056,26 @@ var SpriteSet = function () {
     }]);
 
     return SpriteSet;
-}();
+}(Drawable);
 
 module.exports = SpriteSet;
 
-},{"./dom":5,"./log":10,"./physics":12}],15:[function(require,module,exports){
+},{"./abstract/drawable":2,"./dom":7,"./log":13,"./physics":15}],18:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 var log = require('./log');
+var glob = require('./glob');
 var Physics = require('./physics');
 var Graphics = require('./graphics');
+var GraphicElement = require('./gelement');
+var Sprite = require('./sprite');
+var SpriteSet = require('./spriteset');
 
 var World = function () {
     function World(game) {
@@ -1890,6 +2105,80 @@ var World = function () {
             stage.fire("added");
 
             switchto && this.switchStage(id);
+
+            return stage;
+        }
+    }, {
+        key: 'appendFromRaw',
+        value: function appendFromRaw(game, raw) {
+            var _this = this;
+
+            log('World', 'Adding to World object from raw JSON data');
+            if (raw.stages) {
+                raw.stages.forEach(function (rawstage) {
+                    _this.createStageFromRaw(game, rawstage);
+                });
+            }
+        }
+    }, {
+        key: 'createStageFromRaw',
+        value: function createStageFromRaw(game, raw) {
+            log('Stage', 'Building Stage object from raw JSON data');
+            if (raw.options) {
+                if (raw.options.size) {
+                    raw.options.size = new (Function.prototype.bind.apply(Physics.Vector2D, [null].concat(_toConsumableArray(raw.options.size))))();
+                }
+            }
+
+            var stage = this.createStage(raw.id, raw.options);
+
+            raw.resources && raw.resources.forEach(function (res) {
+                switch (res.type) {
+                    case "audio":
+                        game.audio.load(res.id, res.url);
+                        break;
+                }
+            });
+
+            raw.templates && raw.templates.forEach(function (template) {
+                GraphicElement.createTemplate(template.id, template.type, template.options, template.filters);
+            });
+
+            raw.elements && raw.elements.forEach(function (element) {
+                var elem = void 0;
+                if (element.options && element.options.sprite) {
+                    var spritesets = {};
+                    if (element.options.sprite.spritesets) for (var state in element.options.sprite.spritesets) {
+                        spritesets[state] = new (Function.prototype.bind.apply(SpriteSet, [null].concat(_toConsumableArray(element.options.sprite.spritesets[state]))))();
+                    }
+
+                    element.options.sprite = new Sprite({ spritesets: spritesets });
+                }
+
+                if (element.options && element.options.collision) {
+                    element.options.collision = new (Function.prototype.bind.apply(Physics.Rect, [null].concat(_toConsumableArray(element.options.collision))))();
+                }
+
+                if (element.template) {
+                    elem = stage.addElement(element.layer, element.id, GraphicElement.fromTemplate(game, element.template, element.options));
+                } else {
+                    elem = stage.addElement(element.layer, element.id, new GraphicElement(game, element.type, element.options));
+                }
+
+                if (element.on) {
+                    for (var hookname in element.on) {
+                        elem.on(hookname, glob[element.on[hookname]]);
+                    }
+                }
+
+                if (element.controlled) {
+                    elem.control(game.keyboard, { arrows: true });
+                }
+
+                if (element.followed) {
+                    stage.follow(elem);
+                }
+            });
 
             return stage;
         }
@@ -1971,6 +2260,7 @@ var Stage = function () {
         this.options = Object.assign(Stage.defaultOptions(), options);
         this.context = context;
 
+        log('Stage', 'Created Stage with size : ' + this.options.size);
         this.graphics = new Graphics(this.context, this.options, this.options.size);
     }
 
@@ -2020,4 +2310,4 @@ var Stage = function () {
 
 module.exports = World;
 
-},{"./graphics":8,"./log":10,"./physics":12}]},{},[1]);
+},{"./gelement":8,"./glob":9,"./graphics":10,"./log":13,"./physics":15,"./sprite":16,"./spriteset":17}]},{},[1]);

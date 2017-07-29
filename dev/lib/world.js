@@ -1,6 +1,10 @@
 const log = require('./log');
+const glob = require('./glob');
 const Physics = require('./physics');
 const Graphics = require('./graphics');
+const GraphicElement = require('./gelement');
+const Sprite = require('./sprite');
+const SpriteSet = require('./spriteset');
 
 class World {
     constructor(game, stages = {}) {
@@ -20,6 +24,76 @@ class World {
         stage.fire("added");
 
         switchto && this.switchStage(id);
+
+        return stage;
+    }
+
+    appendFromRaw(game, raw) {
+        log('World', 'Adding to World object from raw JSON data');
+        if (raw.stages) {
+            raw.stages.forEach(rawstage => {
+                this.createStageFromRaw(game, rawstage);
+            });
+        }
+    }
+
+    createStageFromRaw(game, raw) {
+        log('Stage', 'Building Stage object from raw JSON data');
+        if (raw.options) {
+            if (raw.options.size) {
+                raw.options.size = new Physics.Vector2D(...raw.options.size);
+            }
+        }
+
+        const stage = this.createStage(raw.id, raw.options);
+
+        raw.resources && raw.resources.forEach(res => {
+            switch(res.type) {
+                case "audio":
+                    game.audio.load(res.id, res.url);
+                    break;
+            }
+        });
+
+        raw.templates && raw.templates.forEach(template => {
+            GraphicElement.createTemplate(template.id, template.type, template.options, template.filters);
+        });
+
+        raw.elements && raw.elements.forEach(element => {
+            let elem;
+            if (element.options && element.options.sprite) {
+                let spritesets = {};
+                if (element.options.sprite.spritesets) for (let state in element.options.sprite.spritesets) {
+                    spritesets[state] = new SpriteSet(...element.options.sprite.spritesets[state]);
+                }
+
+                element.options.sprite = new Sprite({ spritesets });
+            }
+
+            if (element.options && element.options.collision) {
+                element.options.collision = new Physics.Rect(...element.options.collision);
+            }
+
+            if (element.template) {
+                elem = stage.addElement(element.layer, element.id, GraphicElement.fromTemplate(game, element.template, element.options));
+            } else {
+                elem = stage.addElement(element.layer, element.id, new GraphicElement(game, element.type, element.options));
+            }
+
+            if (element.on) {
+                for (let hookname in element.on) {
+                    elem.on(hookname, glob[element.on[hookname]]);
+                }
+            }
+
+            if (element.controlled) {
+                elem.control(game.keyboard, {arrows : true});
+            }
+
+            if (element.followed) {
+                stage.follow(elem);
+            }
+        });
 
         return stage;
     }
@@ -83,6 +157,7 @@ class Stage {
         this.options = Object.assign(Stage.defaultOptions(), options);
         this.context = context;
 
+        log('Stage', `Created Stage with size : ${this.options.size}`);
         this.graphics = new Graphics(this.context, this.options, this.options.size);
     }
 

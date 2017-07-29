@@ -4,8 +4,11 @@ const Physics = require('./physics');
 const Keyboard = require('./keyboard');
 const Sprite = require('./sprite');
 const SpriteSet = require('./spriteset');
+const Area = require('./area');
 
 const GraphicElementTemplates = {};
+
+const CollisionMatrixDirections = ["right", "top", "left", "top", "left", "bottom", "right", "bottom"];
 
 class GraphicElement {
     static defaultoptions() {
@@ -78,6 +81,10 @@ class GraphicElement {
                 this.initSprite();
                 break;
 
+            case "area":
+                this.initArea();
+                break;
+
             // TODO : Handle vector shapes
             case "shape": 
                 this.initShape(extra);
@@ -91,7 +98,7 @@ class GraphicElement {
     }
 
     get ready() {
-        return this.sprite.currentState.ready;
+        return this.drawable.currentState.ready;
     }
 
     setPosition(x, y) {
@@ -99,13 +106,13 @@ class GraphicElement {
     }
 
     initSprite() {
-        this.sprite = this.options.sprite;
+        this.drawable = this.options.sprite;
     }
 
     initImage() {
         this.url = this.options.url;
 
-        this.sprite = new Sprite({
+        this.drawable = new Sprite({
             spritesets : {
                 neutral : new SpriteSet('file', this.url)
             },
@@ -113,10 +120,15 @@ class GraphicElement {
         });
 
         if (this.options.pattern) {
-            this.sprite.createPattern(this.game.context, this.options.patternsize);
+            this.drawable.createPattern(this.game.context, this.options.patternsize);
         }
 
         log('GElement', "Initialized Graphic Element with image at " + this.url);
+    }
+
+    initArea() {
+        this.drawable = new Area();
+        log('Gelement', 'Initialized Graphic Element with an area');
     }
 
     applyGravity(gravity) {
@@ -145,16 +157,20 @@ class GraphicElement {
 
     updateState() {
         if (this.vector.vely < 0) {
-            this.sprite.changeState('jumping');
+            this.drawable.changeState('jumping');
             this.sticked = false;
         } else if (this.vector.vely > 0) {
-            this.sprite.changeState('falling');
+            this.drawable.changeState('falling');
             this.sticked = false;
         } else if (this.vector.velx != 0) {
-            this.sprite.changeState('running');
+            this.drawable.changeState('running');
         } else {
-            this.sprite.changeState('neutral');
+            this.drawable.changeState('neutral');
         }
+    }
+
+    on(eventname, callback) {
+        this.drawable.on(eventname, callback);
     }
 
     shouldBeDrawn(camera) {
@@ -208,17 +224,19 @@ class GraphicElement {
                 } 
             }
 
-            if (smallindex % 2 == 0) {
-                this.vector.velx = 0;
-                this.vector.accelx = 0;
-                this.vector.x -= C[smallindex];
-            } else {
-                if (this.vector.vely > 0) {
-                    this.sticked = true;
-                }
+            if (this.drawable.collide(gelement, CollisionMatrixDirections[smallindex])) {
+                if (smallindex % 2 == 0) {
+                    this.vector.velx = 0;
+                    this.vector.accelx = 0;
+                    this.vector.x -= C[smallindex];
+                } else {
+                    if (this.vector.vely > 0) {
+                        this.sticked = true;
+                    }
 
-                this.vector.vely = 0;
-                this.vector.y -= C[smallindex];
+                    this.vector.vely = 0;
+                    this.vector.y -= C[smallindex];
+                }
             }
         }
     }
@@ -265,7 +283,7 @@ class GraphicElement {
         context.fillText("Real " + (this.vector.x - camera.rect.x) + " x " + (this.vector.y - camera.rect.y), pos.x + pos.w + 5, pos.y + 24);
         context.fillText("Velocity " + this.vector.velx + " x " + this.vector.vely, pos.x + pos.w + 5, pos.y + 38);
         context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 52);
-        context.fillText("State : " + this.sprite.state + (this.controlled ? ", controlled" : ""), pos.x + pos.w + 5, pos.y + 66);
+        context.fillText("State : " + this.drawable.state + (this.controlled ? ", controlled" : ""), pos.x + pos.w + 5, pos.y + 66);
         context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
     }
 
@@ -273,7 +291,7 @@ class GraphicElement {
         let drawn = false;
         if (this.shouldBeDrawn(camera)) {
             context.globalAlpha = this.effects.opacity;
-            const pos = this.sprite.draw(
+            const pos = this.drawable.draw(
                 context, 
                 camera.origin.x  + this.vector.x - camera.rect.x, 
                 camera.origin.y + this.vector.y - camera.rect.y, 
@@ -319,7 +337,7 @@ class GraphicElement {
                     this.direction = "right";
                     this.keydown = true;
                     this.vector.setAcceleration(this.options.friction, this.vector.accely);
-                    this.sprite.changeState(this.sprite.state, "right");
+                    this.drawable.changeState(this.drawable.state, "right");
                     break;
 
                 case Keyboard.KEY_LEFT : 
@@ -327,7 +345,7 @@ class GraphicElement {
                     this.direction = "left";
                     this.keydown = true;
                     this.vector.setAcceleration(-this.options.friction, this.vector.accely);
-                    this.sprite.changeState(this.sprite.state, "left");
+                    this.drawable.changeState(this.drawable.state, "left");
                     break;
 
                 case Keyboard.KEY_SPACE:
@@ -347,7 +365,7 @@ class GraphicElement {
                 this.vector.setAcceleration(this.options.friction * -mod, this.vector.accely, true);
             }
 
-            this.sprite.changeState();
+            this.drawable.changeState();
         }
     }
 

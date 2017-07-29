@@ -1,0 +1,72 @@
+{
+    "id" : "mainstage",
+
+    "resources" : [
+        { "type" : "audio", "id" : "bg1", "url" : "/audio/bg1.mp3" }
+    ],
+
+    "options" : {
+        "size" : [2000, 1000],
+        "song" : "bg1"
+    },
+
+    "templates" : [
+        { "id" : "brick", "type" : "image", "options" : { "url" : "/brick.jpg", "w" : 64, "h" : 64, "strength" : 2000 } },
+        { "id" : "cloud", "type" : "image", "options" : { "url" : "/cloud.jpg", "useimagesize" : true }, "filters" : {"opacity":0.6} },
+        { "id" : "floor", "type" : "image", "options" : { 
+            "pattern" : true,
+            "patternsize" : { "x" : 64, "y" : 64 },
+            "url" : "/brick.jpg",
+            "x" : 0, "y" : 576,
+            "strength" : 10000
+        }}
+    ],
+
+    "elements" : [
+        { "id" : "floor", "layer" : 2, "template" : "floor", "options" : { "w" : 2000, "h" : 64 }},
+
+        { "id" : "c1", "layer" : 1, "template" : "cloud", "options" : { "x" : 40,  "y" : 20 }     },
+        { "id" : "c2", "layer" : 3, "template" : "cloud", "options" : { "x" : 160, "y" : 80 }     },
+        { "id" : "c3", "layer" : 1, "template" : "cloud", "options" : { "x" : 540, "y" : 40 }     },
+        { "id" : "c4", "layer" : 3, "template" : "cloud", "options" : { "x" : 440, "y" : -140 }   },
+
+        { "id" : "b1", "layer" : 2, "template" : "brick", "options" : { "x" : 400, "y" : 476  }},
+        { "id" : "b2", "layer" : 2, "template" : "brick", "options" : { "x" : 580, "y" : 376  }},
+        { "id" : "b3", "layer" : 2, "template" : "brick", "options" : { "x" : 760, "y" : 276  }},
+        { "id" : "b4", "layer" : 2, "template" : "brick", "options" : { "x" : 580, "y" : 176  }},
+        { "id" : "b5", "layer" : 2, "template" : "brick", "options" : { "x" : 350, "y" : 176  }},
+        { "id" : "b6", "layer" : 2, "template" : "brick", "options" : { "x" : 250, "y" : 76   }},
+        { "id" : "b7", "layer" : 2, "template" : "brick", "options" : { "x" : 150, "y" : -24  }},
+        { "id" : "b8", "layer" : 2, "template" : "brick", "options" : { "x" : 280, "y" : -124 }},
+        { "id" : "b9", "layer" : 2, "template" : "brick", "options" : { "x" : 600, "y" : -184 }},
+
+        { "id" : "wrap", "layer" : 2, "type" : "area", "options" : { "x" : 600, "y" : -204, "h" : 20, "w" : 64 }, 
+            "on" : {
+                "collide" : "resetPlayerPosition"
+            }
+        },  {
+          "id" : "player", "layer" : 2, "type" : "sprite", "options" : {
+                "x" : 20, "y" : 20, 
+                "w" : 120, "h" : 100,
+                "collision" : [30, 20, 50, 78],
+
+                "initspeed" : 1,   "maxspeed"   : 7,    "friction"   : 0.4,
+                "gravity"   : 0.5, "maxgravity" : 15,   "jumpheight" : 11,
+
+                "strength": 1200,
+                "fixedtostage" : true,
+
+                "sprite" : {
+                    "spritesets" : {
+                        "neutral" : ["fileset", "/char/Idle ($).png", 10, 4],
+                        "running" : ["fileset", "/char/Run ($).png",  8,  4],
+                        "jumping" : ["fileset", "/char/Jump ($).png", 8,  3, true],
+                        "falling" : ["fileset", "/char/Fall ($).png", 8,  3, true]
+                    }
+                }
+            },
+            "controlled" : true,
+            "followed" : true
+        }
+    ]
+}
