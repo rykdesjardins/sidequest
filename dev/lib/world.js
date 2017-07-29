@@ -66,6 +66,7 @@ class Stage {
             size : new Physics.Vector2D(1920, 1080),
             origin : new Physics.Vector2D(0, 0),
             verticalModifier : 1,
+            song : "",
             hooks : {},
             layers : 5
         };

@@ -9,6 +9,7 @@ const GraphicElement = require('./lib/gelement');
 const Physics = require('./lib/physics');
 const Keyboard = require('./lib/keyboard');
 const World = require('./lib/world');
+const Audio = require('./lib/audio');
 
 class Game {
     static defaults() {
@@ -103,4 +104,4 @@ class Game {
     createStage() { return this.world.createStage(...arguments) }
 }
 
-glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, World, log }
+glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, World, Audio, log }

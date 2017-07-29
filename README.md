@@ -30,7 +30,7 @@ A side-scroll game engine, in the browser
  
  [✓] Zoom computing according to browser size
  
- [ ] Music and sound loading, playing and hooks
+ [~] Music and sound loading, playing and hooks
  
  [ ] Transitions between stages
  
