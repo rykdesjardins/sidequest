@@ -3,7 +3,7 @@ A side-scroll game engine, in the browser
 
 ![Screenshot](https://erikdesjardins.com/static/git/sidequest2.png)
 
-## Milestones
+## Version 1 - Milestones
  [✓] ES6 Setup with Babel and babili
  
  [✓] Display images and text in canvas
@@ -54,4 +54,11 @@ A side-scroll game engine, in the browser
  
  [ ] Graphic elements with basic AI
  
+ [ ] Mobile on-screen controls
+ 
+ [ ] Documentation
+ 
+ [ ] Host example on private domain
+ 
  [ ] Version 1 
+
