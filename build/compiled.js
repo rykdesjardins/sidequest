@@ -49,7 +49,8 @@ var Game = function () {
 
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
-        this.world = new World(this.context, this.options.world);
+        this.audio = new Audio(this.options.audiochannels);
+        this.world = new World(this, this.options.world);
 
         if (this.options.env === "dev") {
             this.dev = true;
@@ -200,7 +201,7 @@ var AudioChannel = function () {
                 _this.source.buffer = data;
                 _this.source.connect(_this.context.destination);
                 _this.source.loop = loop;
-                _this.source.play(time);
+                _this.source.start(time);
             });
         }
     }, {
@@ -214,7 +215,9 @@ var AudioChannel = function () {
 }();
 
 var Audio = function () {
-    function Audio(totalchannel) {
+    function Audio() {
+        var totalchannel = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 4;
+
         _classCallCheck(this, Audio);
 
         this.totalchannel = totalchannel;
@@ -240,22 +243,33 @@ var Audio = function () {
 
             request.onload = function () {
                 AUDIO_RAW[id].setBuffer(request.response);
+                AUDIO_RAW[id].onready && AUDIO_RAW[id].onready();
                 done && done();
             };
             request.send();
+
+            return AUDIO_RAW[id];
         }
     }, {
         key: 'play',
         value: function play(id) {
             var channel = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+            var _this2 = this;
+
             var time = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
             var loop = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
 
+            log('Audio', 'Requested song with id ' + id + ' to be played');
             if (!AUDIO_RAW[id]) {
                 throw new Error('[Audio] Tried to play undefined sound with id ' + id);
             }
 
             if (!AUDIO_RAW[id].ready) {
+                log('Audio', 'Song with id ' + id + ' will play once it\' loaded');
+                AUDIO_RAW[id].onready = function () {
+                    _this2.channels[channel].play(id, time, loop);
+                };
                 return false;
             }
 
@@ -1849,12 +1863,13 @@ var Physics = require('./physics');
 var Graphics = require('./graphics');
 
 var World = function () {
-    function World(context) {
+    function World(game) {
         var stages = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         _classCallCheck(this, World);
 
-        this.context = context;
+        this.context = game.context;
+        this.audio = game.audio;
         this.stages = stages;
         this.currentStage;
     }
@@ -1881,13 +1896,18 @@ var World = function () {
     }, {
         key: 'switchStage',
         value: function switchStage(id) {
+            log('World', 'Switching to stage with id ' + id);
             if (!this.stages[id]) {
                 throw new Error('[World] Stage with id ' + id + ' does not exist');
             }
 
             this.currentStage && this.currentStage.fire("switchout");
-
             this.currentStage = this.stages[id];
+
+            if (this.currentStage.options.song) {
+                this.audio.play(this.currentStage.options.song, 0, 0, true);
+            }
+
             this.currentStage.fire("switchin");
         }
     }, {
@@ -1935,7 +1955,7 @@ var Stage = function () {
                 size: new Physics.Vector2D(1920, 1080),
                 origin: new Physics.Vector2D(0, 0),
                 verticalModifier: 1,
-                song: "",
+                song: undefined,
                 hooks: {},
                 layers: 5
             };

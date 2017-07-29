@@ -25,7 +25,7 @@ class AudioChannel {
             this.source.buffer = data;
             this.source.connect(this.context.destination);
             this.source.loop = loop;
-            this.source.play(time);
+            this.source.start(time);
         });
     }
 
@@ -35,7 +35,7 @@ class AudioChannel {
 }
 
 class Audio {
-    constructor(totalchannel) {
+    constructor(totalchannel = 4) {
         this.totalchannel = totalchannel;
         this.channels = [];
 
@@ -57,17 +57,25 @@ class Audio {
 
         request.onload = function() {
             AUDIO_RAW[id].setBuffer(request.response);
+            AUDIO_RAW[id].onready && AUDIO_RAW[id].onready();
             done && done();
         }
         request.send();
+
+        return AUDIO_RAW[id];
     }
 
     play(id, channel = 0, time = 0, loop = false) {
+        log('Audio', `Requested song with id ${id} to be played`);
         if (!AUDIO_RAW[id]) {
             throw new Error(`[Audio] Tried to play undefined sound with id ${id}`);
         }
 
         if (!AUDIO_RAW[id].ready) {
+            log('Audio', 'Song with id ' + id + ' will play once it\' loaded');
+            AUDIO_RAW[id].onready = () => {
+                this.channels[channel].play(id, time, loop);
+            };
             return false;
         }
 

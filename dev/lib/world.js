@@ -3,8 +3,9 @@ const Physics = require('./physics');
 const Graphics = require('./graphics');
 
 class World {
-    constructor(context, stages = {}) {
-        this.context = context;
+    constructor(game, stages = {}) {
+        this.context = game.context;
+        this.audio = game.audio;
         this.stages = stages;
         this.currentStage;
     }
@@ -24,13 +25,18 @@ class World {
     }
 
     switchStage(id) {
+        log('World', `Switching to stage with id ${id}`);
         if (!this.stages[id]) {
             throw new Error(`[World] Stage with id ${id} does not exist`);
         }
 
         this.currentStage && this.currentStage.fire("switchout");
-
         this.currentStage = this.stages[id];
+
+        if (this.currentStage.options.song) {
+            this.audio.play(this.currentStage.options.song, 0, 0, true);
+        }
+
         this.currentStage.fire("switchin");
     }
 
@@ -66,7 +72,7 @@ class Stage {
             size : new Physics.Vector2D(1920, 1080),
             origin : new Physics.Vector2D(0, 0),
             verticalModifier : 1,
-            song : "",
+            song : undefined,
             hooks : {},
             layers : 5
         };

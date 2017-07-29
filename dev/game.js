@@ -33,7 +33,8 @@ class Game {
 
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
-        this.world = new World(this.context, this.options.world);
+        this.audio = new Audio(this.options.audiochannels);
+        this.world = new World(this, this.options.world);
 
         if (this.options.env === "dev") {
             this.dev = true;
