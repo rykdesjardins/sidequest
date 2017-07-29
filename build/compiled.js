@@ -16,6 +16,7 @@ var GraphicElement = require('./lib/gelement');
 var Physics = require('./lib/physics');
 var Keyboard = require('./lib/keyboard');
 var World = require('./lib/world');
+var Audio = require('./lib/audio');
 
 var Game = function () {
     _createClass(Game, null, [{
@@ -48,7 +49,8 @@ var Game = function () {
 
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
-        this.world = new World(this.context, this.options.world);
+        this.audio = new Audio(this.options.audiochannels);
+        this.world = new World(this, this.options.world);
 
         if (this.options.env === "dev") {
             this.dev = true;
@@ -147,9 +149,145 @@ var Game = function () {
     return Game;
 }();
 
-glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics, Keyboard: Keyboard, Mouse: Mouse, World: World, log: log };
+glob.SideQuest = { Game: Game, SpriteSet: SpriteSet, Sprite: Sprite, GraphicElement: GraphicElement, Physics: Physics, Keyboard: Keyboard, Mouse: Mouse, World: World, Audio: Audio, log: log };
 
-},{"./lib/debugger":3,"./lib/gelement":5,"./lib/glob":6,"./lib/graphics":7,"./lib/keyboard":8,"./lib/log":9,"./lib/mouse":10,"./lib/physics":11,"./lib/sprite":12,"./lib/spriteset":13,"./lib/world":14}],2:[function(require,module,exports){
+},{"./lib/audio":2,"./lib/debugger":4,"./lib/gelement":6,"./lib/glob":7,"./lib/graphics":8,"./lib/keyboard":9,"./lib/log":10,"./lib/mouse":11,"./lib/physics":12,"./lib/sprite":13,"./lib/spriteset":14,"./lib/world":15}],2:[function(require,module,exports){
+'use strict';
+
+var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
+
+function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
+
+var log = require('./log');
+
+var AUDIO_RAW = {};
+
+var Sound = function () {
+    function Sound() {
+        _classCallCheck(this, Sound);
+
+        this.ready = false;
+    }
+
+    _createClass(Sound, [{
+        key: 'setBuffer',
+        value: function setBuffer(buffer) {
+            this.buffer = buffer;
+            this.ready = true;
+        }
+    }]);
+
+    return Sound;
+}();
+
+var AudioChannel = function () {
+    function AudioChannel() {
+        _classCallCheck(this, AudioChannel);
+
+        this.context = new AudioContext();
+        this.source;
+    }
+
+    _createClass(AudioChannel, [{
+        key: 'play',
+        value: function play(id) {
+            var _this = this;
+
+            var time = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+            var loop = arguments[2];
+
+            this.context.decodeAudioData(AUDIO_RAW[id].buffer, function (data) {
+                _this.source = _this.context.createBufferSource();
+                _this.source.buffer = data;
+                _this.source.connect(_this.context.destination);
+                _this.source.loop = loop;
+                _this.source.start(time);
+            });
+        }
+    }, {
+        key: 'stop',
+        value: function stop() {
+            this.source && this.source.stop();
+        }
+    }]);
+
+    return AudioChannel;
+}();
+
+var Audio = function () {
+    function Audio() {
+        var totalchannel = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 4;
+
+        _classCallCheck(this, Audio);
+
+        this.totalchannel = totalchannel;
+        this.channels = [];
+
+        for (var i = 0; i < this.totalchannel; i++) {
+            this.channels.push(new AudioChannel());
+        }
+    }
+
+    _createClass(Audio, [{
+        key: 'load',
+        value: function load(id, filename, done) {
+            if (AUDIO_RAW[id]) {
+                throw new Error('[Audio] Tried to register existing audio file with id ' + id);
+            }
+
+            AUDIO_RAW[id] = new Sound();
+
+            var request = new XMLHttpRequest();
+            request.open('GET', filename, true);
+            request.responseType = 'arraybuffer';
+
+            request.onload = function () {
+                AUDIO_RAW[id].setBuffer(request.response);
+                AUDIO_RAW[id].onready && AUDIO_RAW[id].onready();
+                done && done();
+            };
+            request.send();
+
+            return AUDIO_RAW[id];
+        }
+    }, {
+        key: 'play',
+        value: function play(id) {
+            var channel = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : 0;
+
+            var _this2 = this;
+
+            var time = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : 0;
+            var loop = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : false;
+
+            log('Audio', 'Requested song with id ' + id + ' to be played');
+            if (!AUDIO_RAW[id]) {
+                throw new Error('[Audio] Tried to play undefined sound with id ' + id);
+            }
+
+            if (!AUDIO_RAW[id].ready) {
+                log('Audio', 'Song with id ' + id + ' will play once it\' loaded');
+                AUDIO_RAW[id].onready = function () {
+                    _this2.channels[channel].play(id, time, loop);
+                };
+                return false;
+            }
+
+            this.channels[channel].play(id, time, loop);
+        }
+    }, {
+        key: 'stop',
+        value: function stop(channel) {
+            this.channels[channel].stop();
+        }
+    }]);
+
+    return Audio;
+}();
+
+module.exports = Audio;
+
+},{"./log":10}],3:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -242,7 +380,7 @@ var Camera = function () {
 
 module.exports = Camera;
 
-},{"./log":9,"./physics":11}],3:[function(require,module,exports){
+},{"./log":10,"./physics":12}],4:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -354,7 +492,7 @@ var GameDebugger = function () {
 
 module.exports = GameDebugger;
 
-},{"./dom":4,"./glob":6,"./log":9}],4:[function(require,module,exports){
+},{"./dom":5,"./glob":7,"./log":10}],5:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -420,7 +558,7 @@ var DOMHelper = function () {
 
 module.exports = new DOMHelper();
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -834,7 +972,7 @@ var GraphicElement = function () {
 
 module.exports = GraphicElement;
 
-},{"./dom":4,"./keyboard":8,"./log":9,"./physics":11,"./sprite":12,"./spriteset":13}],6:[function(require,module,exports){
+},{"./dom":5,"./keyboard":9,"./log":10,"./physics":12,"./sprite":13,"./spriteset":14}],7:[function(require,module,exports){
 (function (global){
 "use strict";
 
@@ -848,7 +986,7 @@ glob.__SIDESCROLLGAME = __SIDESCROLLGAME;
 module.exports = glob;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1016,7 +1154,7 @@ var Graphics = function () {
 
 module.exports = Graphics;
 
-},{"./camera":2,"./log":9,"./physics":11}],8:[function(require,module,exports){
+},{"./camera":3,"./log":10,"./physics":12}],9:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1179,7 +1317,7 @@ var Keyboard = function () {
 
 module.exports = Keyboard;
 
-},{"./glob":6,"./log":9}],9:[function(require,module,exports){
+},{"./glob":7,"./log":10}],10:[function(require,module,exports){
 "use strict";
 
 var glob = require('./glob.js');
@@ -1197,7 +1335,7 @@ log.listen = function (cb) {
 
 module.exports = glob.__SIDESCROLLGAME.env == "dev" ? log : noOp;
 
-},{"./glob.js":6}],10:[function(require,module,exports){
+},{"./glob.js":7}],11:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1262,7 +1400,7 @@ var GameMouse = function () {
 
 module.exports = GameMouse;
 
-},{"./log":9,"./physics":11}],11:[function(require,module,exports){
+},{"./log":10,"./physics":12}],12:[function(require,module,exports){
 "use strict";
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1424,7 +1562,7 @@ var Collider = function () {
 
 module.exports = { Vector2D: Vector2D, Rect: Rect, Collider: Collider };
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1522,7 +1660,7 @@ var Sprite = function () {
 
 module.exports = Sprite;
 
-},{"./log":9,"./physics":11}],13:[function(require,module,exports){
+},{"./log":10,"./physics":12}],14:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1713,7 +1851,7 @@ var SpriteSet = function () {
 
 module.exports = SpriteSet;
 
-},{"./dom":4,"./log":9,"./physics":11}],14:[function(require,module,exports){
+},{"./dom":5,"./log":10,"./physics":12}],15:[function(require,module,exports){
 'use strict';
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
@@ -1725,12 +1863,13 @@ var Physics = require('./physics');
 var Graphics = require('./graphics');
 
 var World = function () {
-    function World(context) {
+    function World(game) {
         var stages = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 
         _classCallCheck(this, World);
 
-        this.context = context;
+        this.context = game.context;
+        this.audio = game.audio;
         this.stages = stages;
         this.currentStage;
     }
@@ -1757,13 +1896,18 @@ var World = function () {
     }, {
         key: 'switchStage',
         value: function switchStage(id) {
+            log('World', 'Switching to stage with id ' + id);
             if (!this.stages[id]) {
                 throw new Error('[World] Stage with id ' + id + ' does not exist');
             }
 
             this.currentStage && this.currentStage.fire("switchout");
-
             this.currentStage = this.stages[id];
+
+            if (this.currentStage.options.song) {
+                this.audio.play(this.currentStage.options.song, 0, 0, true);
+            }
+
             this.currentStage.fire("switchin");
         }
     }, {
@@ -1811,6 +1955,7 @@ var Stage = function () {
                 size: new Physics.Vector2D(1920, 1080),
                 origin: new Physics.Vector2D(0, 0),
                 verticalModifier: 1,
+                song: undefined,
                 hooks: {},
                 layers: 5
             };
@@ -1875,4 +2020,4 @@ var Stage = function () {
 
 module.exports = World;
 
-},{"./graphics":7,"./log":9,"./physics":11}]},{},[1]);
+},{"./graphics":8,"./log":10,"./physics":12}]},{},[1]);

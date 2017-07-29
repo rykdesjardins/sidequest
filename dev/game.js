@@ -9,6 +9,7 @@ const GraphicElement = require('./lib/gelement');
 const Physics = require('./lib/physics');
 const Keyboard = require('./lib/keyboard');
 const World = require('./lib/world');
+const Audio = require('./lib/audio');
 
 class Game {
     static defaults() {
@@ -32,7 +33,8 @@ class Game {
 
         this.mouse = new Mouse(this.canvas);
         this.keyboard = new Keyboard(this.canvas);
-        this.world = new World(this.context, this.options.world);
+        this.audio = new Audio(this.options.audiochannels);
+        this.world = new World(this, this.options.world);
 
         if (this.options.env === "dev") {
             this.dev = true;
@@ -103,4 +105,4 @@ class Game {
     createStage() { return this.world.createStage(...arguments) }
 }
 
-glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, World, log }
+glob.SideQuest = { Game, SpriteSet, Sprite, GraphicElement, Physics, Keyboard, Mouse, World, Audio, log }

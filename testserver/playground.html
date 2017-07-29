@@ -9,7 +9,12 @@
         <script src="//localhost:8088/build/compiled.js"></script>
         <script>
             var game = new SideQuest.Game("gamecontainer", {env : "dev", width : 1200, height : 640});
-            var stage = game.createStage("mainstage", { size : new SideQuest.Physics.Vector2D(2000, 1000) }, false, true);
+            game.audio.load('bg1', '/audio/bg1.mp3');
+
+            var stage = game.createStage("mainstage", { 
+                size : new SideQuest.Physics.Vector2D(2000, 1000), 
+                song : 'bg1'
+            }, false, true);
             var h = game.height;
 
             SideQuest.GraphicElement.createTemplate('brick', "image", { url : "/brick.jpg", w : 64, h : 64, strength : 2000 });
