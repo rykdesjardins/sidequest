@@ -329,6 +329,14 @@ class GraphicElement {
                 this.rect.y,
                 camera
             );
+
+            if (pos && this.effects.stroke) {
+                context.beginPath();
+                context.rect(pos.x, pos.y, pos.w, pos.h);
+                context.lineWidth = this.effects.stroke.width;
+                context.strokeStyle = this.effects.stroke.style;
+                context.stroke();
+            }
             context.restore();
 
             drawn = !!pos;

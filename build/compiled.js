@@ -994,6 +994,13 @@ var GraphicElement = function () {
                 context.globalAlpha = this.effects.opacity;
                 context.globalCompositeOperation = this.effects.composite;
                 var pos = this.drawable.draw(context, camera.origin.x + this.vector.x - camera.rect.x, camera.origin.y + this.vector.y - camera.rect.y, this.rect.x, this.rect.y, camera);
+                if (pos && this.effects.stroke) {
+                    context.beginPath();
+                    context.rect(pos.x, pos.y, pos.w, pos.h);
+                    context.lineWidth = this.effects.stroke.width;
+                    context.strokeStyle = this.effects.stroke.style;
+                    context.stroke();
+                }
                 context.restore();
 
                 drawn = !!pos;
