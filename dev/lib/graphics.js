@@ -78,8 +78,9 @@ class Graphics {
         this.camera = new Camera(options.origin.x, options.origin.y, context.width, context.height, options.verticalModifier);
         this.camera.setLimits(this.size);
 
+        this.backLayer = new GraphicLayer(-2, size);
         this.layers = [];
-        this.fixedLayer = new GraphicLayer(-1, size);
+        this.frontLayer = new GraphicLayer(-1, size);
 
         for (let i = 0; i < options.layers; i++) {
             this.layers.push(new GraphicLayer(i, size));
@@ -98,8 +99,8 @@ class Graphics {
         this.c.fillRect(...this.rect);
     }
 
-    addElementToFixed(elementid, element) {
-        this.fixedLayer.addElement(elementid, element);
+    addElementToFixed(elementid, element, front) {
+        front ? this.frontLayer.addElement(elementid, element) : this.backLayer.addElement(elementid, element);
     }
 
     addElement(layerid, elementid, element) {
@@ -112,13 +113,15 @@ class Graphics {
     update() {
         this.camera.update();
 
-        this.fixedLayer.update();
+        this.backLayer.update();
         this.layers.forEach(x => x.update().impactCheck(this.context, this.camera).updateStates());
+        this.frontLayer.update();
     }
 
     draw() {
-        this.fixedLayer.draw(this.context, this.camera);
+        this.backLayer.draw(this.context, this.camera);
         this.layers.forEach(x => x.draw(this.context, this.camera));
+        this.frontLayer.draw(this.context, this.camera);
     }
 }
 

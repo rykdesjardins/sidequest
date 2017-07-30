@@ -6,6 +6,7 @@ class Drawable {
 
         this.state = "neutral";
         this.facing = "right";
+
         this.initialstate = this.state;
     }
 
@@ -35,6 +36,7 @@ class Drawable {
     addState() {}
     changeState() {}
     updateState() {}
+    destroy() {}
     
     get currentState() { return this.state; }
     get alwaysDraw() { return false; }

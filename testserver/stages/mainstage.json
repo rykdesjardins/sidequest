@@ -8,13 +8,14 @@
     "options" : {
         "size" : [2000, 1000],
         "song" : "bg1",
-        "background" : { "template" : "desert", "id" : "mainstagebackground" }
+        "background" : { "template" : "desert", "id" : "mainstagebackground" },
+        "fog" : { "template" : "basicfog", "id" : "mainstagefog" }
     },
 
     "templates" : [
         { "id" : "brick", "type" : "image", "options" : { "url" : "/brick.jpg", "w" : 64, "h" : 64, "strength" : 2000 } },
         { "id" : "cloud", "type" : "image", "options" : { "url" : "/cloud.png", "useimagesize" : true, "through" : true }, 
-            "filters" : { "opacity":0.6 } 
+            "effects" : { "opacity":0.6 } 
         }, { "id" : "floor", "type" : "image", "options" : { 
             "pattern" : true,
             "patternsize" : { "x" : 64, "y" : 64 },
@@ -22,16 +23,20 @@
             "x" : 0, "y" : 576,
             "strength" : 10000
             }
-        }, { "id" : "desert", "type" : "background", "options" : { "url" : "/desert.png", "modifier" : { "x" : 0.5, "y" : 0.8 } } }
+        }, { "id" : "desert", "type" : "background", "options" : { "url" : "/desert.png", "modifier" : { "x" : 0.5, "y" : 0.8 } } },
+        { "id" : "basicfog", "type" : "fog", "options" : { 
+            "url" : "/fog.jpg",
+            "velocity" : { "x" : -1.2, "y" : -0.1}
+        }, "effects" : { "composite" : "overlay", "opacity" : 0.2 } }
     ],
 
     "elements" : [
         { "id" : "floor", "layer" : 2, "template" : "floor", "options" : { "w" : 2000, "h" : 64 }},
 
-        { "id" : "c1", "layer" : 1, "template" : "cloud", "options" : { "x" : 40,  "y" : -120 }     },
-        { "id" : "c2", "layer" : 3, "template" : "cloud", "options" : { "x" : 160, "y" : -180 }     },
-        { "id" : "c3", "layer" : 1, "template" : "cloud", "options" : { "x" : 540, "y" : -140 }     },
-        { "id" : "c4", "layer" : 3, "template" : "cloud", "options" : { "x" : 440, "y" : -240 }   },
+        { "id" : "c1", "layer" : 1, "template" : "cloud", "options" : { "x" : 40,  "y" : -120 }},
+        { "id" : "c2", "layer" : 3, "template" : "cloud", "options" : { "x" : 160, "y" : -180 }},
+        { "id" : "c3", "layer" : 1, "template" : "cloud", "options" : { "x" : 540, "y" : -140 }},
+        { "id" : "c4", "layer" : 3, "template" : "cloud", "options" : { "x" : 440, "y" : -240 }},
 
         { "id" : "b1", "layer" : 2, "template" : "brick", "options" : { "x" : 400, "y" : 476  }},
         { "id" : "b2", "layer" : 2, "template" : "brick", "options" : { "x" : 580, "y" : 376  }},

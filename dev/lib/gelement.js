@@ -5,7 +5,7 @@ const Keyboard = require('./keyboard');
 const Sprite = require('./sprite');
 const SpriteSet = require('./spriteset');
 const Area = require('./area');
-const Background = require('./background');
+const Pan = require('./pan');
 
 const GraphicElementTemplates = {};
 
@@ -32,7 +32,8 @@ class GraphicElement {
 
     static defaulteffects()  {
         return { 
-            opacity : 1.0 
+            opacity : 1.0,
+            composite : "source-over"
         };
     }
 
@@ -74,6 +75,14 @@ class GraphicElement {
         this.controlled = this.options.controlled;
         this.options.gravity && this.applyGravity(this.options.gravity);
 
+        if (this.options.velocity) {
+            this.vector.setVelocity(this.options.velocity.x, this.options.velocity.y);
+        }
+
+        if (this.options.acceleration) {
+            this.vector.setAcceleration(this.options.acceleration.x, this.options.acceleration.y);
+        }
+
         switch (this.type) {
             case "image":
                 this.initImage();
@@ -88,6 +97,8 @@ class GraphicElement {
                 break;
 
             case "background":
+            case "fog":
+            case "pan":
                 this.initBackground();
                 break;
 
@@ -116,7 +127,7 @@ class GraphicElement {
     }
 
     initBackground() {
-        this.drawable = new Background(this.options);
+        this.drawable = new Pan(this.options);
     }
 
     initImage() {
@@ -307,7 +318,9 @@ class GraphicElement {
     draw(context, camera) {
         let drawn = false;
         if (this.drawable.alwaysDraw || this.shouldBeDrawn(camera)) {
+            context.save();
             context.globalAlpha = this.effects.opacity;
+            context.globalCompositeOperation = this.effects.composite;
             const pos = this.drawable.draw(
                 context, 
                 camera.origin.x  + this.vector.x - camera.rect.x, 
@@ -316,7 +329,7 @@ class GraphicElement {
                 this.rect.y,
                 camera
             );
-            context.globalAlpha = 1;
+            context.restore();
 
             drawn = !!pos;
             if (this.options.useimagesize && pos) {

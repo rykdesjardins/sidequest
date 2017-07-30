@@ -2,7 +2,7 @@ const log = require('./log');
 const Drawable = require('./abstract/drawable');
 const Physics = require('./physics');
 
-class Background extends Drawable {
+class Pan extends Drawable {
     static defaultoptions() {
         return {
             modifier : { x : 1, y : 1 },
@@ -13,8 +13,9 @@ class Background extends Drawable {
     constructor(options = {}) {
         super(...arguments);
         this.ready = false;
-        this.options = Object.assign(Background.defaultoptions(), options);
+        this.options = Object.assign(Pan.defaultoptions(), options);
         this.bitmap;
+        this.pattern;
 
         this.options.url && this.load(this.options.url);
     }
@@ -35,15 +36,22 @@ class Background extends Drawable {
     draw(context, x, y, w, h, camera) {
         if (!this.ready) {
             return { x, y, w, h };
+        } else if (!this.pattern) {
+            this.pattern = context.createPattern(this.bitmap, 'repeat');
         }
 
         const rect = [
             x * this.options.modifier.x, 
             y * this.options.modifier.y - (this.bitmap.height - camera.rect.h), 
-            this.bitmap.width, 
-            this.bitmap.height
+            camera.rect.w,
+            camera.rect.h
         ]
-        context.drawImage( this.bitmap, ...rect );
+
+        context.fillStyle = this.pattern;
+        context.translate(rect[0], rect[1]);
+        context.fillRect(-rect[0], -rect[1], rect[2], rect[3]);
+        context.translate(-rect[0], -rect[1]);
+
         return new Physics.Rect(...rect);
     }
 
@@ -51,7 +59,11 @@ class Background extends Drawable {
         return false;
     }
 
+    destroy() {
+
+    }
+
     get alwaysDraw() { return true; }
 }
 
-module.exports = Background;
+module.exports = Pan;

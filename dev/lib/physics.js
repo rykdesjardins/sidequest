@@ -24,27 +24,27 @@ class Vector2D {
         return new Vector2D(this.x - vector.x, this.y - vector.y);
     }
 
-    at(x, y) {
+    at(x = 0, y = 0) {
         this.x = x;
         this.y = y;
     }
 
-    to(destx, desty) {
+    to(destx = 0, desty = 0) {
         this.destx = destx;
         this.desty = desty;
     }
 
-    setMaxVelocity(x, y) {
+    setMaxVelocity(x = 0, y = 0) {
         this.maxvelx = x;
         this.maxvely = y;
     }
 
-    setVelocity(x, y) {
+    setVelocity(x = 0, y = 0) {
         this.velx = x;
         this.vely = y;
     }
 
-    setAcceleration(x, y, breakatzerox, breakatzeroy) {
+    setAcceleration(x = 0, y = 0, breakatzerox, breakatzeroy) {
         this.accelx = x;
         this.accely = y;
 
@@ -86,7 +86,7 @@ class Vector2D {
 }
 
 class Rect {
-    constructor(x, y, w, h) {
+    constructor(x = 0, y = 0, w = 0, h = 0) {
         this.x = x;
         this.y = y;
         this.w = w;
