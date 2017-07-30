@@ -6,10 +6,11 @@ class Drawable {
 
         this.state = "neutral";
         this.facing = "right";
+
         this.initialstate = this.state;
     }
 
-    draw(context, x, y, w, h) {
+    draw(context, x, y, w, h, camera) {
         return {x, y, w, h};
     }
 
@@ -35,8 +36,10 @@ class Drawable {
     addState() {}
     changeState() {}
     updateState() {}
+    destroy() {}
     
     get currentState() { return this.state; }
+    get alwaysDraw() { return false; }
 }
 
 module.exports = Drawable;

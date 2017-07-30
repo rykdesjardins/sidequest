@@ -1,7 +1,7 @@
 # sidequest
 A side-scroll game engine, in the browser
 
-![Screenshot](https://erikdesjardins.com/static/git/sidequest2.png)
+![Screenshot](https://erikdesjardins.com/static/git/sidequest3.png)
 
 ## Version 1 - Milestones
  [✓] ES6 Setup with Babel and babili
@@ -40,11 +40,13 @@ A side-scroll game engine, in the browser
  
  [✓] Loading stages from JSON files / endpoints
  
+ [✓] Background and Fog patterns with composition
+
+ [ ] Defining areas with different physics (ice, water, trampolines)
+
  [ ] Saving game state, loading state
  
  [ ] Interactive menus using mouse events
- 
- [ ] Defining areas with different physics (ice, water, trampolines)
  
  [ ] Overriding collision behaviour depending on orientation
  

@@ -19,7 +19,7 @@ class GraphicLayer {
         return this;
     }
 
-    clear() {
+    destroy() {
         this.graphicselements.forEach(x => x.destroy());
         this.graphicselements = [];
         this._assocGE = {};
@@ -30,8 +30,11 @@ class GraphicLayer {
     impactCheck(context, camera) {
         for (let i = 0; i < this.graphicselements.length; i++) {
             this.graphicselements[i].options.fixedtostage && this.graphicselements[i].restrict(camera, this.size);
+            if (this.graphicselements[i].options.through) { continue; }
 
             for (let j = i+1; j < this.graphicselements.length; j++) {
+                if (this.graphicselements[j].options.through) { continue; }
+
                 if (Physics.Collider.rectangles(
                         this.graphicselements[i].collisionBox(camera),
                         this.graphicselements[j].collisionBox(camera)
@@ -64,7 +67,7 @@ class GraphicLayer {
 class Graphics {
     static defaultOptions() {
         return {
-            bgcolor : "#eaeff2"
+            bgcolor : "#E7E5E2"
         };
     }
 
@@ -75,8 +78,9 @@ class Graphics {
         this.camera = new Camera(options.origin.x, options.origin.y, context.width, context.height, options.verticalModifier);
         this.camera.setLimits(this.size);
 
+        this.backLayer = new GraphicLayer(-2, size);
         this.layers = [];
-        this.fixedLayer = new GraphicLayer(-1, size);
+        this.frontLayer = new GraphicLayer(-1, size);
 
         for (let i = 0; i < options.layers; i++) {
             this.layers.push(new GraphicLayer(i, size));
@@ -95,6 +99,10 @@ class Graphics {
         this.c.fillRect(...this.rect);
     }
 
+    addElementToFixed(elementid, element, front) {
+        front ? this.frontLayer.addElement(elementid, element) : this.backLayer.addElement(elementid, element);
+    }
+
     addElement(layerid, elementid, element) {
         element.id = elementid;
         this.layers[layerid].addElement(elementid, element);
@@ -104,11 +112,16 @@ class Graphics {
 
     update() {
         this.camera.update();
+
+        this.backLayer.update();
         this.layers.forEach(x => x.update().impactCheck(this.context, this.camera).updateStates());
+        this.frontLayer.update();
     }
 
     draw() {
+        this.backLayer.draw(this.context, this.camera);
         this.layers.forEach(x => x.draw(this.context, this.camera));
+        this.frontLayer.draw(this.context, this.camera);
     }
 }
 

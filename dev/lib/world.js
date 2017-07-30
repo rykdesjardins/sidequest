@@ -45,8 +45,6 @@ class World {
             }
         }
 
-        const stage = this.createStage(raw.id, raw.options);
-
         raw.resources && raw.resources.forEach(res => {
             switch(res.type) {
                 case "audio":
@@ -56,12 +54,15 @@ class World {
         });
 
         raw.templates && raw.templates.forEach(template => {
-            GraphicElement.createTemplate(template.id, template.type, template.options, template.filters);
+            GraphicElement.createTemplate(template.id, template.type, template.options, template.effects);
         });
+
+        const stage = this.createStage(raw.id, raw.options);
 
         raw.elements && raw.elements.forEach(element => {
             let elem;
-            if (element.options && element.options.sprite) {
+            element.options = element.options || {};
+            if (element.options.sprite) {
                 let spritesets = {};
                 if (element.options.sprite.spritesets) for (let state in element.options.sprite.spritesets) {
                     spritesets[state] = new SpriteSet(...element.options.sprite.spritesets[state]);
@@ -70,8 +71,16 @@ class World {
                 element.options.sprite = new Sprite({ spritesets });
             }
 
-            if (element.options && element.options.collision) {
+            if (element.options.collision) {
                 element.options.collision = new Physics.Rect(...element.options.collision);
+            }
+
+            if (element.options.velocity) {
+                element.vector.setVelocity(element.options.velocity.x, element.options.velocity.y);
+            }
+
+            if (element.options.acceleration) {
+                element.vector.setAcceleration(element.options.acceleration.x, element.options.acceleration.y);
             }
 
             if (element.template) {
@@ -94,6 +103,18 @@ class World {
                 stage.follow(elem);
             }
         });
+
+        if (stage.options.background) {
+            const background = stage.addElementToFixed(stage.options.background.id, 
+                GraphicElement.fromTemplate(game, stage.options.background.template, stage.options.background.options, stage.options.background.effets)
+            );
+        }
+
+        if (stage.options.fog) {
+            const fog = stage.addElementToFixed(stage.options.fog.id, 
+                GraphicElement.fromTemplate(game, stage.options.fog.template, stage.options.fog.options, stage.options.fog.effects), true
+            );
+        }
 
         return stage;
     }
@@ -181,6 +202,7 @@ class Stage {
 
     // Shortcut
     addElement() { return this.graphics.addElement(...arguments); }
+    addElementToFixed() { return this.graphics.addElementToFixed(...arguments); }
     follow() { return this.graphics.camera.follow(...arguments); }
 }
 
