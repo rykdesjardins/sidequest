@@ -26,6 +26,7 @@ class GraphicElement {
             pattern : false, patternsize : undefined,
             through : false,
 
+            environment : undefined,
             override : {}
         };
     }
@@ -141,7 +142,7 @@ class GraphicElement {
         });
 
         if (this.options.pattern) {
-            this.drawable.createPattern(this.game.context, this.options.patternsize);
+            this.drawable.createPattern(this.game.context, this.options.patternsize, this.options.patterncanvas);
         }
 
         log('GElement', "Initialized Graphic Element with image at " + this.url);
@@ -165,6 +166,19 @@ class GraphicElement {
     }
 
     update() {
+        if (this.originaloptions) {
+            this.options = Object.assign(this.options, this.originaloptions);
+        }
+
+        if (this.environment) {
+            this.originaloptions = {};
+            for (let k in this.environment) {
+                this.originaloptions[k] = this.options[k];
+                this.options[k] = this.environment[k];
+            }
+            this.environment = undefined;
+        }
+
         this.vector.update();
 
         if (this.options.gravity && this.vector.y + this.rect.y > this.game.height) {
@@ -259,6 +273,8 @@ class GraphicElement {
                     this.vector.y -= C[smallindex];
                 }
             }
+
+            this.environment = gelement.options.environment;
         }
     }
 
@@ -329,6 +345,14 @@ class GraphicElement {
                 this.rect.y,
                 camera
             );
+
+            if (pos && this.effects.stroke) {
+                context.beginPath();
+                context.rect(pos.x, pos.y, pos.w, pos.h);
+                context.lineWidth = this.effects.stroke.width;
+                context.strokeStyle = this.effects.stroke.style;
+                context.stroke();
+            }
             context.restore();
 
             drawn = !!pos;

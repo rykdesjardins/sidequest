@@ -42,7 +42,7 @@ A side-scroll game engine, in the browser
  
  [✓] Background and Fog patterns with composition
 
- [ ] Defining areas with different physics (ice, water, trampolines)
+ [✓] Defining areas with different physics (ice, water, trampolines)
 
  [ ] Saving game state, loading state
  
