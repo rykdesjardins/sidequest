@@ -705,6 +705,7 @@ var GraphicElement = function () {
                 pattern: false, patternsize: undefined,
                 through: false,
 
+                environment: undefined,
                 override: {}
             };
         }
@@ -832,7 +833,7 @@ var GraphicElement = function () {
             });
 
             if (this.options.pattern) {
-                this.drawable.createPattern(this.game.context, this.options.patternsize);
+                this.drawable.createPattern(this.game.context, this.options.patternsize, this.options.patterncanvas);
             }
 
             log('GElement', "Initialized Graphic Element with image at " + this.url);
@@ -859,6 +860,19 @@ var GraphicElement = function () {
     }, {
         key: 'update',
         value: function update() {
+            if (this.originaloptions) {
+                this.options = Object.assign(this.options, this.originaloptions);
+            }
+
+            if (this.environment) {
+                this.originaloptions = {};
+                for (var k in this.environment) {
+                    this.originaloptions[k] = this.options[k];
+                    this.options[k] = this.environment[k];
+                }
+                this.environment = undefined;
+            }
+
             this.vector.update();
 
             if (this.options.gravity && this.vector.y + this.rect.y > this.game.height) {
@@ -943,6 +957,8 @@ var GraphicElement = function () {
                         this.vector.y -= C[smallindex];
                     }
                 }
+
+                this.environment = gelement.options.environment;
             }
         }
     }, {
@@ -994,6 +1010,7 @@ var GraphicElement = function () {
                 context.globalAlpha = this.effects.opacity;
                 context.globalCompositeOperation = this.effects.composite;
                 var pos = this.drawable.draw(context, camera.origin.x + this.vector.x - camera.rect.x, camera.origin.y + this.vector.y - camera.rect.y, this.rect.x, this.rect.y, camera);
+
                 if (pos && this.effects.stroke) {
                     context.beginPath();
                     context.rect(pos.x, pos.y, pos.w, pos.h);
@@ -2169,26 +2186,32 @@ var SpriteSet = function (_Drawable) {
         }
     }, {
         key: 'createPattern',
-        value: function createPattern(context, imagesize) {
+        value: function createPattern(context, imagesize, usecanvas) {
             var _this3 = this;
 
             this.pattern = true;
 
             var actuallyCreatePattern = function actuallyCreatePattern() {
                 _this3.states.forEach(function (state) {
-                    var offCanvas = DOM.create({ node: "canvas" });
-                    if (!imagesize) {
-                        imagesize = new Physics.Vector2D(state.width, state.height);
+                    if (usecanvas) {
+                        var offCanvas = DOM.create({ node: "canvas" });
+                        if (!imagesize) {
+                            imagesize = new Physics.Vector2D(state.width, state.height);
+                        }
+
+                        offCanvas.width = imagesize.x;
+                        offCanvas.height = imagesize.y;
+                        offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
+
+                        _this3.patterns.push({
+                            pattern: context.createPattern(offCanvas, "repeat"),
+                            canvas: offCanvas
+                        });
+                    } else {
+                        _this3.patterns.push({
+                            pattern: context.createPattern(state, "repeat")
+                        });
                     }
-
-                    offCanvas.width = imagesize.x;
-                    offCanvas.height = imagesize.y;
-                    offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
-
-                    _this3.patterns.push({
-                        pattern: context.createPattern(offCanvas, "repeat"),
-                        canvas: offCanvas
-                    });
                 });
 
                 log('SpriteSet', 'Loaded pattern for ' + _this3.states.length + " states");
@@ -2202,7 +2225,7 @@ var SpriteSet = function (_Drawable) {
         }
     }, {
         key: 'draw',
-        value: function draw(context, x, y, w, h) {
+        value: function draw(context, x, y, w, h, camera) {
             if (!this.ready) {
                 return;
             }
@@ -2212,8 +2235,11 @@ var SpriteSet = function (_Drawable) {
             w = w || this.currentFrame.width;
             h = h || this.currentFrame.height;
             if (this.pattern) {
+                var offset = { x: x % w, y: y % h };
                 context.fillStyle = this.currentPattern.pattern;
-                context.fillRect(x, y, w, h);
+                context.translate(offset.x, offset.y);
+                context.fillRect(x - offset.x, y - offset.y, w, h);
+                context.translate(-offset.x, -offset.y);
             } else {
                 context.drawImage(this.currentFrame, x, y, w, h);
             }

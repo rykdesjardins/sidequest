@@ -101,24 +101,30 @@ class SpriteSet extends Drawable {
         }
     }
 
-    createPattern(context, imagesize) {
+    createPattern(context, imagesize, usecanvas) {
         this.pattern = true;
 
         const actuallyCreatePattern = () => {
             this.states.forEach(state => {
-                const offCanvas = DOM.create({ node : "canvas" });
-                if (!imagesize) {
-                    imagesize = new Physics.Vector2D(state.width, state.height);
+                if (usecanvas) {
+                    const offCanvas = DOM.create({ node : "canvas" });
+                    if (!imagesize) {
+                        imagesize = new Physics.Vector2D(state.width, state.height);
+                    }
+
+                    offCanvas.width = imagesize.x;
+                    offCanvas.height = imagesize.y;
+                    offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
+
+                    this.patterns.push( {
+                        pattern : context.createPattern(offCanvas, "repeat"),
+                        canvas : offCanvas
+                    });
+                } else {
+                    this.patterns.push({
+                        pattern : context.createPattern(state, "repeat")
+                    });
                 }
-
-                offCanvas.width = imagesize.x;
-                offCanvas.height = imagesize.y;
-                offCanvas.getContext('2d').drawImage(state, 0, 0, imagesize.x, imagesize.y);
-
-                this.patterns.push( {
-                    pattern : context.createPattern(offCanvas, "repeat"),
-                    canvas : offCanvas
-                });
             });
 
             log('SpriteSet', 'Loaded pattern for ' + this.states.length + " states");
@@ -131,7 +137,7 @@ class SpriteSet extends Drawable {
         }
     }
 
-    draw(context, x, y, w, h) {
+    draw(context, x, y, w, h, camera) {
         if (!this.ready) {
             return;
         }
@@ -141,8 +147,11 @@ class SpriteSet extends Drawable {
         w = w || this.currentFrame.width;
         h = h || this.currentFrame.height;
         if (this.pattern) {
+            let offset = { x : x % w, y : y % h };
             context.fillStyle = this.currentPattern.pattern;
-            context.fillRect(x, y, w, h);
+            context.translate(offset.x, offset.y);
+            context.fillRect(x - offset.x, y - offset.y, w, h);
+            context.translate(-offset.x, -offset.y);
         } else {
             context.drawImage(this.currentFrame, x, y, w, h);
         }
