@@ -99,6 +99,10 @@ class Rect {
         ];
     }
 
+    spread() {
+        return [this.x, this.y, this.w, this.h];
+    }
+
     static fromVectors2D(a, b) {
         return new Rect(a.x, a.y, b.x, b.y);
     }

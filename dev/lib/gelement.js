@@ -5,6 +5,7 @@ const Keyboard = require('./keyboard');
 const Sprite = require('./sprite');
 const SpriteSet = require('./spriteset');
 const Area = require('./area');
+const Background = require('./background');
 
 const GraphicElementTemplates = {};
 
@@ -23,6 +24,7 @@ class GraphicElement {
             strength : 500,
             controlled : false, fixedtostage : false,
             pattern : false, patternsize : undefined,
+            through : false,
 
             override : {}
         };
@@ -85,6 +87,10 @@ class GraphicElement {
                 this.initArea();
                 break;
 
+            case "background":
+                this.initBackground();
+                break;
+
             // TODO : Handle vector shapes
             case "shape": 
                 this.initShape(extra);
@@ -107,6 +113,10 @@ class GraphicElement {
 
     initSprite() {
         this.drawable = this.options.sprite;
+    }
+
+    initBackground() {
+        this.drawable = new Background(this.options);
     }
 
     initImage() {
@@ -175,7 +185,7 @@ class GraphicElement {
 
     shouldBeDrawn(camera) {
         return this.vector.x - camera.rect.x + this.rect.x > 0 && this.vector.x - camera.rect.x < camera.rect.w &&
-            this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
+               this.vector.y - camera.rect.y + this.rect.y > 0 && this.vector.y - camera.rect.y < camera.rect.h;
     }
 
     get collisionPoints() {
@@ -254,16 +264,18 @@ class GraphicElement {
         const pos = {x : this.vector.x - camera.rect.x, y : this.vector.y - camera.rect.y, w : this.rect.x, h : this.rect.y};
 
         if (drawn) {
-            context.beginPath();
-            context.rect(
-                this.collision.x + pos.x, 
-                this.collision.y + pos.y, 
-                this.collision.w || pos.w, 
-                this.collision.h || pos.h
-            );
-            context.lineWidth = 1;
-            context.strokeStyle = 'red';
-            context.stroke();
+            if (!this.options.through) {
+                context.beginPath();
+                context.rect(
+                    this.collision.x + pos.x, 
+                    this.collision.y + pos.y, 
+                    this.collision.w || pos.w, 
+                    this.collision.h || pos.h
+                );
+                context.lineWidth = 1;
+                context.strokeStyle = 'red';
+                context.stroke();
+            }
 
             context.beginPath();
             context.rect(
@@ -277,7 +289,11 @@ class GraphicElement {
             context.stroke();
         }
 
-        context.font = "12px Arial, sans-serif";
+        context.font = "bold 12px Arial, sans-serif";
+        context.fillStyle = "green";
+        context.fillText((this.id && (this.id + ", ") || "") + this.type, pos.x, pos.y - 8);
+
+        context.font = "normal 12px Arial, sans-serif";
         context.fillStyle = "black";
         context.fillText("Relative " + this.vector.x + " x " + this.vector.y, pos.x + pos.w + 5, pos.y + 10);
         context.fillText("Real " + (this.vector.x - camera.rect.x) + " x " + (this.vector.y - camera.rect.y), pos.x + pos.w + 5, pos.y + 24);
@@ -285,18 +301,20 @@ class GraphicElement {
         context.fillText("Acceleration " + this.vector.accelx + " x " + this.vector.accely, pos.x + pos.w + 5, pos.y + 52);
         context.fillText("State : " + this.drawable.state + (this.controlled ? ", controlled" : ""), pos.x + pos.w + 5, pos.y + 66);
         context.fillText("Drawn : " + (drawn ? "Yes" : "No"), pos.x + pos.w + 5, pos.y + 80);
+        context.fillText("Can collide : " + (this.options.through ? "No" : "Yes"), pos.x + pos.w + 5, pos.y + 94);
     }
 
     draw(context, camera) {
         let drawn = false;
-        if (this.shouldBeDrawn(camera)) {
+        if (this.drawable.alwaysDraw || this.shouldBeDrawn(camera)) {
             context.globalAlpha = this.effects.opacity;
             const pos = this.drawable.draw(
                 context, 
                 camera.origin.x  + this.vector.x - camera.rect.x, 
                 camera.origin.y + this.vector.y - camera.rect.y, 
                 this.rect.x, 
-                this.rect.y
+                this.rect.y,
+                camera
             );
             context.globalAlpha = 1;
 

@@ -19,7 +19,7 @@ class GraphicLayer {
         return this;
     }
 
-    clear() {
+    destroy() {
         this.graphicselements.forEach(x => x.destroy());
         this.graphicselements = [];
         this._assocGE = {};
@@ -30,8 +30,11 @@ class GraphicLayer {
     impactCheck(context, camera) {
         for (let i = 0; i < this.graphicselements.length; i++) {
             this.graphicselements[i].options.fixedtostage && this.graphicselements[i].restrict(camera, this.size);
+            if (this.graphicselements[i].options.through) { continue; }
 
             for (let j = i+1; j < this.graphicselements.length; j++) {
+                if (this.graphicselements[j].options.through) { continue; }
+
                 if (Physics.Collider.rectangles(
                         this.graphicselements[i].collisionBox(camera),
                         this.graphicselements[j].collisionBox(camera)
@@ -64,7 +67,7 @@ class GraphicLayer {
 class Graphics {
     static defaultOptions() {
         return {
-            bgcolor : "#eaeff2"
+            bgcolor : "#E7E5E2"
         };
     }
 
@@ -95,6 +98,10 @@ class Graphics {
         this.c.fillRect(...this.rect);
     }
 
+    addElementToFixed(elementid, element) {
+        this.fixedLayer.addElement(elementid, element);
+    }
+
     addElement(layerid, elementid, element) {
         element.id = elementid;
         this.layers[layerid].addElement(elementid, element);
@@ -104,10 +111,13 @@ class Graphics {
 
     update() {
         this.camera.update();
+
+        this.fixedLayer.update();
         this.layers.forEach(x => x.update().impactCheck(this.context, this.camera).updateStates());
     }
 
     draw() {
+        this.fixedLayer.draw(this.context, this.camera);
         this.layers.forEach(x => x.draw(this.context, this.camera));
     }
 }

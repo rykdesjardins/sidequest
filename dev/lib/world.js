@@ -45,8 +45,6 @@ class World {
             }
         }
 
-        const stage = this.createStage(raw.id, raw.options);
-
         raw.resources && raw.resources.forEach(res => {
             switch(res.type) {
                 case "audio":
@@ -58,6 +56,8 @@ class World {
         raw.templates && raw.templates.forEach(template => {
             GraphicElement.createTemplate(template.id, template.type, template.options, template.filters);
         });
+
+        const stage = this.createStage(raw.id, raw.options);
 
         raw.elements && raw.elements.forEach(element => {
             let elem;
@@ -94,6 +94,12 @@ class World {
                 stage.follow(elem);
             }
         });
+
+        if (stage.options.background) {
+            const background = stage.addElementToFixed(stage.options.background.id, 
+                GraphicElement.fromTemplate(game, stage.options.background.template, stage.options.background.options)
+            );
+        }
 
         return stage;
     }
@@ -181,6 +187,7 @@ class Stage {
 
     // Shortcut
     addElement() { return this.graphics.addElement(...arguments); }
+    addElementToFixed() { return this.graphics.addElementToFixed(...arguments); }
     follow() { return this.graphics.camera.follow(...arguments); }
 }
 
