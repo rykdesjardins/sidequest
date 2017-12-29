@@ -1,5 +1,5 @@
 # sidequest
-A side-scroll game engine, in the browser
+A side-scroll game engine, in the browser. I do not work on this anymore.
 
 ![Screenshot](https://erikdesjardins.com/static/git/sidequest3.png)
 
